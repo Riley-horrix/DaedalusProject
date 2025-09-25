@@ -34,9 +34,10 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Get Doxygen
-        run: sudo apt-add-repository universe
-             sudo apt-get update
-             sudo apt-get install doxygen
+        run: |
+            sudo apt-add-repository universe
+            sudo apt-get update
+            sudo apt-get install doxygen
       - name: Build Docs
         run: make doc
       - name: Upload artifact
