@@ -17,7 +17,7 @@ using namespace Dae;
 
 Configurable::json Configurable::global;
 
-Configurable::Configurable(const std::string& key): config(global[key]) {}
+Configurable::Configurable(const std::string& key) : config(global[key]) {}
 
 Configurable::~Configurable() {}
 
@@ -25,7 +25,8 @@ int Configurable::initialize(const std::string& filepath) {
     // Open the configuration file
     std::ifstream file(filepath);
     if (!file.is_open()) {
-        stl_warn(errno, "Failed to open configuration file at '%s'", filepath.c_str());
+        stl_warn(errno, "Failed to open configuration file at '%s'",
+                 filepath.c_str());
         return ST_FOPEN_FAIL;
     }
 
@@ -43,6 +44,7 @@ double Configurable::confNum(const std::string& key, const double defaultVal) {
     return getOrDefault<double>(config, key, defaultVal);
 }
 
-std::string Configurable::confStr(const std::string& key, const std::string& defaultVal) {
+std::string Configurable::confStr(const std::string& key,
+                                  const std::string& defaultVal) {
     return getOrDefault<std::string>(config, key, defaultVal);
 }

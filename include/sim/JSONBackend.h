@@ -58,11 +58,7 @@ public:
     /**
      * @brief Status codes for the JSON backend.
      */
-    enum Status {
-        ST_GOOD = 0,
-        ST_SOCKET_FAIL,
-        ST_BIND_FAIL
-    };
+    enum Status { ST_GOOD = 0, ST_SOCKET_FAIL, ST_BIND_FAIL };
 
     /**
      * @brief Construct a new JSONBackend object.
@@ -77,26 +73,27 @@ public:
     ~JSONBackend();
 
     /// @copydoc Dae::PhysicsBackend::iterate
-    std::unique_ptr<Telemetry> iterate(const std::unique_ptr<Control> ctrl) override;
+    std::unique_ptr<Telemetry>
+    iterate(const std::unique_ptr<Control> ctrl) override;
 
 private:
     using json = nlohmann::json;
 
-    /**
+/**
      * @brief JSON Protocol binary packet.
      */
-    #pragma pack(push, 1)
+#pragma pack(push, 1)
     struct ControlPacket {
         uint16_t magic = htons(18458);
         uint16_t frame_rate;
         uint32_t frame_count;
         uint16_t pwm[16];
     };
-    #pragma pack(pop)
+#pragma pack(pop)
 
     // Configs
 
-    /// @brief Timeout to wait for telemetry to be received (s). Config 
+    /// @brief Timeout to wait for telemetry to be received (s). Config
     /// 'telem_timeout'
     double TELEM_TIMEOUT = 10;
 
@@ -153,10 +150,11 @@ private:
      * @param len Number of elements in the array.
      * @return bool Status flag.
      */
-    bool validateAndGetJsonArr(double* values, const std::string& field, json j, const unsigned int len);
+    bool validateAndGetJsonArr(double* values, const std::string& field, json j,
+                               const unsigned int len);
 
     /// @copydoc Dae::Configurable::configure
     void configure(void) override;
 };
 
-} // Closing namespace Dae
+} // namespace Dae

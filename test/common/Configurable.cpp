@@ -16,9 +16,7 @@ using namespace Dae;
 
 class Component : public Configurable {
 public:
-    Component(): Configurable("Component") {
-        configure();
-    }
+    Component() : Configurable("Component") { configure(); }
 
     double a;
     double b;

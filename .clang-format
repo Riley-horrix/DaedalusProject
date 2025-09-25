@@ -1,0 +1,58 @@
+BasedOnStyle: LLVM
+
+# --- Indentation & Alignment ---
+IndentWidth: 4               # Matches the provided code (4-space indent)
+TabWidth: 4
+ContinuationIndentWidth: 4       # Controls indentation of wrapped lines
+UseTab: Never                # Always use spaces, never tabs
+AccessModifierOffset: -4     # Access specifiers (public/protected/private) flush with class scope
+AlignAfterOpenBracket: Align  # Align parameters after '('
+AlignConsecutiveAssignments: true
+AlignConsecutiveDeclarations: true
+AlignEscapedNewlines: Left
+AlignOperands: true
+AlignTrailingComments: true   # Keep Doxygen comments aligned
+AllowAllArgumentsOnNextLine: false
+AllowShortBlocksOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: All
+AllowShortIfStatementsOnASingleLine: Always
+AllowShortLoopsOnASingleLine: false
+
+# --- Braces & Breaks ---
+BreakBeforeBraces: Attach
+
+# --- Includes ---
+IncludeBlocks: Preserve      # Don’t reorder #includes unnecessarily
+SortIncludes: false          # Maintain manual include order
+IncludeCategories:
+  - Regex: '^<.*>$'
+    Priority: 1
+  - Regex: '.*'
+    Priority: 2
+
+# --- Namespace & Spacing ---
+NamespaceIndentation: None   # Matches your style (namespace Dae { ... })
+SpaceBeforeParens: ControlStatements  # `if (...)` but `func(...)`
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+SpaceAfterCStyleCast: false
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCpp11BracedList: false
+Cpp11BracedListStyle: true
+
+# --- Comments ---
+ReflowComments: false
+
+# --- Line Length ---
+ColumnLimit: 80             # Wider limit to accommodate Doxygen comments
+
+# --- Pointer & Reference Alignment ---
+PointerAlignment: Left       # `int* ptr` instead of `int *ptr`
+
+# --- Misc ---
+KeepEmptyLines:
+  AtEndOfFile: true
+  AtStartOfBlock: false
+  AtStartOfFile: false
+FixNamespaceComments: true

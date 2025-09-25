@@ -14,6 +14,8 @@
 using namespace Dae;
 
 uint64_t Utils::micros() {
-    const std::chrono::system_clock::duration epoch = std::chrono::system_clock::now().time_since_epoch();
-    return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::microseconds>(epoch).count());
+    const std::chrono::system_clock::duration epoch =
+        std::chrono::system_clock::now().time_since_epoch();
+    return static_cast<uint64_t>(
+        std::chrono::duration_cast<std::chrono::microseconds>(epoch).count());
 }

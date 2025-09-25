@@ -25,11 +25,7 @@ public:
     /**
      * @brief Status codes for Configurable class.
      */
-    enum Status {
-        ST_GOOD = 0,
-        ST_FOPEN_FAIL,
-        ST_PARSE_FAIL
-    };
+    enum Status { ST_GOOD = 0, ST_FOPEN_FAIL, ST_PARSE_FAIL };
 
     /**
      * @brief Construct a new Configurable object.
@@ -79,7 +75,9 @@ protected:
      * @param defaultVal Default value if it is not found.
      * @return std::string The value or default.
      */
-    std::string confStr(const std::string& key, const std::string& defaultVal = "");
+    std::string confStr(const std::string& key,
+                        const std::string& defaultVal = "");
+
 private:
     using json = nlohmann::json;
 
@@ -98,13 +96,15 @@ private:
      * @param defaultValue A default value.
      * @return T The found object or the default value;
      */
-    template<typename T>
-    static T getOrDefault(const nlohmann::json& json, const std::string& key, const T& defaultValue) {
+    template <typename T>
+    static T getOrDefault(const nlohmann::json& json, const std::string& key,
+                          const T& defaultValue) {
         if (json.contains(key) && !json[key].is_null()) {
             try {
                 return json[key].get<T>();
             } catch (const nlohmann::json::exception& e) {
-                info("Failed to parse %s as a " MSTR(T) ", \"%s\"", key.c_str(), e.what());
+                info("Failed to parse %s as a " MSTR(T) ", \"%s\"", key.c_str(),
+                     e.what());
                 return defaultValue;
             }
         }
@@ -112,4 +112,4 @@ private:
     }
 };
 
-} // Closing namespace Dae
+} // namespace Dae

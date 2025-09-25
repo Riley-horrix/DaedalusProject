@@ -4,6 +4,23 @@ NPROCS:=16
 
 all: build/daedalus build/test
 
+doc:
+	@mkdir -p $(BUILD_DIR)/doc
+	doxygen doc/Doxyfile
+	open build/doc/html/index.html
+
+SRC_FILES := $(shell find ./src -name \*.cpp)
+INCLUDE_FILES  := $(shell find ./include -name \*.h)
+TEST_FILES := $(shell find ./test -name \*.cpp)
+
+FORMAT_FILES := $(SRC_FILES) $(TEST_FILES) $(INCLUDE_FILES)
+
+format:
+	@clang-format -Werror --dry-run --verbose $(FORMAT_FILES)
+
+format-hard:
+	@clang-format -Werror -i --verbose $(FORMAT_FILES)
+
 test: build/test
 	$(eval TESTCASE := $(word 2, $(MAKECMDGOALS)))
 	@if [ -z "$(TESTCASE)" ]; then \
@@ -59,4 +76,4 @@ lines-code:
 clean:
 	@rm -rf $(BUILD_DIR)/*
 
-.PHONY: all test clean daedalus build/daedalus daedalus-debug build/daedalus-debug build/common build/common-debug build/test build/test-debug
+.PHONY: all test doc format clean daedalus build/daedalus daedalus-debug build/daedalus-debug build/common build/common-debug build/test build/test-debug

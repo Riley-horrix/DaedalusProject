@@ -22,7 +22,7 @@ namespace Dae {
  * @brief Static utility functions.
  */
 class Utils {
-public: 
+public:
     /**
      * @brief Get the current time since unix epoch in microseconds.
      * 
@@ -31,4 +31,4 @@ public:
     static uint64_t micros();
 };
 
-} // Closing namespace Dae
+} // namespace Dae
