@@ -4,7 +4,7 @@
  * @brief Implementation of the Configurable class.
  * @version 0.1
  * @date 2025-09-24
- * 
+ *
  * Copyright (c) Riley Horrix 2025
  */
 #include <iostream>
@@ -17,7 +17,8 @@ using namespace Dae;
 
 Configurable::json Configurable::global;
 
-Configurable::Configurable(const std::string& key) : config(global[key]) {}
+Configurable::Configurable(const std::string& key)
+    : key(key), config(global[key]) {}
 
 Configurable::~Configurable() {}
 
@@ -38,6 +39,16 @@ int Configurable::initialize(const std::string& filepath) {
     }
 
     return 0;
+}
+
+void Dae::Configurable::cnf(const std::string& key, const double value) {
+    config[key] = value;
+    configure();
+}
+
+void Dae::Configurable::cnf(const std::string& key, const std::string& value) {
+    config[key] = value;
+    configure();
 }
 
 double Configurable::confNum(const std::string& key, const double defaultVal) {

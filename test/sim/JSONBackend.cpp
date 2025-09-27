@@ -4,7 +4,7 @@
  * @brief Testing file for JSONBackend class.
  * @version 0.1
  * @date 2025-09-24
- * 
+ *
  * Copyright (c) Riley Horrix 2025
  */
 #include <catch2/catch_all.hpp>
@@ -19,7 +19,6 @@ using namespace Dae;
 
 TEST_CASE("JSONBackend can initialise and start with no running server",
           "[JSONBackend]") {
-    Configurable::initialize("test/sim/JSONBackend.json");
     JSONBackend backend;
 
     REQUIRE(backend);
@@ -28,7 +27,6 @@ TEST_CASE("JSONBackend can initialise and start with no running server",
 TEST_CASE(
     "JSONBackend can send control packets successfully and decode telemetry",
     "[JSONBackend]") {
-    Configurable::initialize("test/sim/JSONBackend.json");
 
     // Initialise a UDP server
     int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -46,6 +44,9 @@ TEST_CASE(
     JSONBackend backend;
     REQUIRE(backend);
 
+    backend.cnf("telem_timeout", 1.0);
+    backend.cnf("receive_timeout", 0.1);
+
     // Send control to the backend
     std::unique_ptr<PhysicsBackend::Control> ctrl =
         std::make_unique<PhysicsBackend::Control>();
@@ -56,6 +57,7 @@ TEST_CASE(
 
     usleep(10000);
 
+    // Invoke a single iteration on the Physics backend and let it timeout
     REQUIRE(backend.iterate(std::move(ctrl)) == nullptr);
     info("^^^ this is meant to happen");
 

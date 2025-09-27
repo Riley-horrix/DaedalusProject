@@ -4,7 +4,7 @@
  * @brief Definition of the JSONBackend class.
  * @version 0.1
  * @date 2025-09-24
- * 
+ *
  * Copyright (c) Riley Horrix 2025
  */
 #pragma once
@@ -19,15 +19,15 @@ namespace Dae {
 
 /**
  * @brief The JSONBackend class implements the ArduPilot SITL interface.
- * 
+ *
  * More details can be found here, https://github.com/ArduPilot/ardupilot/blob/master/libraries/SITL/examples/JSON/readme.md
- * 
+ *
  * The external physics simulation process should host a UDP server at a known
  * address and port number.
- * 
- * The JSONBackend will then connect to that UDP server and stream a binary 
+ *
+ * The JSONBackend will then connect to that UDP server and stream a binary
  * control signal to it, while receiving the vehicle telemetry in JSON format.
- * 
+ *
  * The binary control format is specified as follows:
  * ```cpp
  *  struct ControlPacket {
@@ -38,7 +38,7 @@ namespace Dae {
  * };
  * ```
  * Every value in the control packet should be in network order.
- * 
+ *
  * The JSON format is specified as follows:
  * ```json
  * {
@@ -58,12 +58,12 @@ public:
     /**
      * @brief Status codes for the JSON backend.
      */
-    enum Status { ST_GOOD = 0, ST_SOCKET_FAIL, ST_BIND_FAIL };
+    enum Status { ST_GOOD = 0, ST_SOCKET_FAIL, ST_BIND_FAIL, ST_MOVED_OUT };
 
     /**
      * @brief Construct a new JSONBackend object.
-     * 
-     * @param udpPort Desired port number for the udp server.
+     *
+     * @param key Configuration key.
      */
     JSONBackend(const std::string& key = "JSONBackend");
 
@@ -71,6 +71,34 @@ public:
      * @brief Destroy the JSONBackend object.
      */
     ~JSONBackend();
+
+    /**
+    * @brief Copy construct a new JSONBackend object.
+    *
+    * @param other The other class instance.
+    */
+    JSONBackend& operator=(const JSONBackend& other) = delete;
+
+    /**
+    * @brief Copy construct a new JSONBackend object.
+    *
+    * @param other The other class instance.
+    */
+    JSONBackend(const JSONBackend& other) = delete;
+
+    /**
+    * @brief Move construct a new JSONBackend object.
+    *
+    * @param other The rvalue class instance.
+    */
+    JSONBackend(JSONBackend&& other);
+
+    /**
+    * @brief Move assignment construct a new JSONBackend object.
+    *
+    * @param other The rvalue class instance.
+    */
+    JSONBackend& operator=(JSONBackend&& other);
 
     /// @copydoc Dae::PhysicsBackend::iterate
     std::unique_ptr<Telemetry>
@@ -131,7 +159,7 @@ private:
     /**
      * @brief Validate that the json object contains the `field`, and if it is
      * populated, then set the `value` to whatever is in the json field.
-     * 
+     *
      * @param value The value to extract into.
      * @param field The json field to extract from.
      * @param j The json object containing the value.
@@ -141,9 +169,9 @@ private:
 
     /**
      * @brief Validate that the json array within the json object at `field`,
-     * contains `len` values, and then moves the numbers into the `values` 
+     * contains `len` values, and then moves the numbers into the `values`
      * array.
-     * 
+     *
      * @param values The values to extract into.
      * @param field The json array name.
      * @param j The json object containing the array.

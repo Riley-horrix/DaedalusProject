@@ -43,6 +43,43 @@ JSONBackend::JSONBackend(const std::string& key) : Configurable(key) {
 
 JSONBackend::~JSONBackend() { close(sockfd); }
 
+JSONBackend::JSONBackend(JSONBackend&& other)
+    : PhysicsBackend(std::move(other)), Configurable(std::move(other)),
+      TELEM_TIMEOUT(other.TELEM_TIMEOUT),
+      RECEIVE_TIMEOUT(other.RECEIVE_TIMEOUT), SERVER_PORT(other.SERVER_PORT),
+      SERVER_ADDR(std::move(other.SERVER_ADDR)), sockfd(other.sockfd),
+      serverAddr(other.serverAddr), control(other.control) {
+    // Leave the other instance in a safe state.
+    other.sockfd     = -1;
+    other.statusCode = ST_MOVED_OUT;
+}
+
+JSONBackend& JSONBackend::operator=(JSONBackend&& other) {
+    if (this != &other) {
+        // Clean up existing socket
+        if (sockfd >= 0) {
+            close(sockfd);
+            sockfd = -1;
+        }
+
+        PhysicsBackend::operator=(std::move(other));
+        Configurable::operator=(std::move(other));
+
+        TELEM_TIMEOUT   = other.TELEM_TIMEOUT;
+        RECEIVE_TIMEOUT = other.RECEIVE_TIMEOUT;
+        SERVER_PORT     = other.SERVER_PORT;
+        SERVER_ADDR     = std::move(other.SERVER_ADDR);
+
+        sockfd     = other.sockfd;
+        serverAddr = other.serverAddr;
+
+        other.sockfd = -1;
+        other.statusCode = ST_MOVED_OUT;
+    }
+
+    return *this;
+}
+
 std::unique_ptr<PhysicsBackend::Telemetry>
 JSONBackend::iterate(const std::unique_ptr<Control> ctrl) {
     // Fill up the control packet

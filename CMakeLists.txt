@@ -34,6 +34,7 @@ add_compile_options(${WARNINGS})
 include(CMakeSources.cmake)
 
 # Include directories
+include_directories(.)
 include_directories(include)
 include_directories(lib/include)
 

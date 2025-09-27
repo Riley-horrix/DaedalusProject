@@ -4,7 +4,7 @@
  * @brief Testing file for Configurable class.
  * @version 0.1
  * @date 2025-09-24
- * 
+ *
  * Copyright (c) Riley Horrix 2025
  */
 #include <catch2/catch_all.hpp>
@@ -37,20 +37,16 @@ public:
     }
 };
 
-TEST_CASE("Configurable can configure classes", "[Configurable]") {
+TEST_CASE("Configurable can configure classes with a configuration file", "[Configurable]") {
     Configurable::initialize("test/common/Configurable.json");
 
     Component comp;
 
-    SECTION("Configurable can configure numbers") {
-        REQUIRE(comp.a == 100);
-        REQUIRE(comp.b == 0);
-        REQUIRE(comp.c == 10);
-    }
+    REQUIRE(comp.a == 100);
+    REQUIRE(comp.b == 0);
+    REQUIRE(comp.c == 10);
 
-    SECTION("Configurable can configure strings") {
-        REQUIRE(comp.astr == "100");
-        REQUIRE(comp.bstr == "");
-        REQUIRE(comp.cstr == "balloon");
-    }
+    REQUIRE(comp.astr == "100");
+    REQUIRE(comp.bstr == "");
+    REQUIRE(comp.cstr == "balloon");
 }

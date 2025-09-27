@@ -7,7 +7,9 @@ all: build/daedalus build/test
 doc:
 	@mkdir -p $(BUILD_DIR)/doc
 	doxygen doc/Doxyfile
+	@cp doc/doxygen-awesome-css/*.js build/doc/html/
 	@echo "Documentation available in build/doc/html/index.html"
+	@echo "    open build/doc/html/index.html"
 
 SRC_FILES := $(shell find ./src -name \*.cpp)
 INCLUDE_FILES  := $(shell find ./include -name \*.h)

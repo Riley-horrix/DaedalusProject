@@ -1,6 +1,0 @@
-{
-    "JSONBackend": {
-        "telem_timeout": 1.0,
-        "receive_timeout": 0.1
-    }
-}
