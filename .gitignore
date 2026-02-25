@@ -45,3 +45,8 @@
 
 # Build files
 build
+
+lib/*
+*.acmi
+
+__pycache__
