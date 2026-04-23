@@ -9,6 +9,10 @@ from src.algorithms.sac.sac_agent import SACAgent
 from src.configs.config import Config
 from src.utils.logging import LoggingStruct
 
+
+data_route = "/vol/bitbucket/rh1122/DaedalusProject/data/"
+
+
 def train(env_config: Config, agent_config: Config, run: wandb.Run | None):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
@@ -36,7 +40,7 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None):
     for episode in range(env_config('episodes')):
         # Reset environment and replay buffer at the start of each episode
         obs = env.reset()
-        buffer.clear()
+        epoch_time = 0
 
         for step in range(env_config('episode_length')):
             epoch_time = time.time()
@@ -60,22 +64,37 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None):
             agent_update_time = time.time()
             agent.update(buffer, 1, log)
             agent_update_time = time.time() - agent_update_time
+
+            # Log metrics every 10 steps
+            if (step + 1) % 10 == 0:
+                if run is not None:
+                    log_dict = {
+                        "time/env_step_time": env_step_time,
+                        "time/agent_update_time": agent_update_time,
+                        "time/epoch_time": epoch_time,
+                        "env/reward": reward.mean().item(),
+                        "env/done": done.float().mean().item(),
+                        "env/bad_done": bad_done.float().mean().item(),
+                        "env/timeout": timeout.float().mean().item(),
+                    }
+                    log_dict.update(log.log)
+                    run.log(log_dict)
+                else:
+                    print(f"Episode {episode}, Step {step}, Reward: {reward.mean().item():.2f}, Done: {done.float().mean().item():.2f}, Bad Done: {bad_done.float().mean().item():.2f}, Timeout: {timeout.float().mean().item():.2f}, Env Step Time: {env_step_time:.4f}s, Agent Update Time: {agent_update_time:.4f}s, Epoch Time: {epoch_time:.4f}s")
+
             epoch_time = time.time() - epoch_time
 
-            # Log to WandB
-            if run is not None:
-                log_dict = {
-                    "time/env_step_time": env_step_time,
-                    "time/agent_update_time": agent_update_time,
-                    "time/epoch_time": epoch_time,
-                    "env/reward": reward.mean().item(),
-                    "env/done": done.float().mean().item(),
-                    "env/bad_done": bad_done.float().mean().item(),
-                    "env/timeout": timeout.float().mean().item(),
-                }
-                log_dict.update(log.log)
-                run.log(log_dict)
-            else:
-                print(f"Episode {episode}, Step {step}, Reward: {reward.mean().item():.2f}, Done: {done.float().mean().item():.2f}, Bad Done: {bad_done.float().mean().item():.2f}, Timeout: {timeout.float().mean().item():.2f}, Env Step Time: {env_step_time:.4f}s, Agent Update Time: {agent_update_time:.4f}s, Epoch Time: {epoch_time:.4f}s")
+            # If all environments are done, break the loop and start a new episode
+            if real_done.float().mean().item() == 1.0:
+                break
 
+
+        # Save the model at the end of each 10 episodes
+        if episode % 10 == 0:
+            print("Saving model...")
+            path = f"{data_route}{agent_config('name')}_episode_{episode}.pt"
+            agent.save(path)
+            if run is not None:
+                run.save(path)
+            else:
 
