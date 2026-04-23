@@ -4,7 +4,7 @@
     "num_envs": 1024,
     "buffer_capacity": 16384,
     "episodes": 1024,
-    "episode_length": 64,
+    "episode_length": 2048,
     "min_init_altitude": 5000.0,
     "max_init_altitude": 7000.0,
     "min_init_v": 250.0,
