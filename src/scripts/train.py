@@ -92,10 +92,12 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None):
 
 
         # Save the model at the end of each 10 episodes
+        print("Episode Complete.")
         if episode % 10 == 0:
             print("Saving model...")
             path = f"{data_route}{agent_config('name')}_episode_{episode}.pt"
             agent.save(path)
             if run is not None:
                 run.save(path)
+        print("Model Saved.")
 
