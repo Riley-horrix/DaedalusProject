@@ -44,7 +44,7 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None):
         epoch_time = 0
 
         for step in range(env_config('episode_length')):
-            epoch_time = time.time()
+            epoch_time_temp = time.time()
             with torch.no_grad():
                 action = agent.act(obs)
 
@@ -83,7 +83,7 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None):
                 else:
                     print(f"Episode {episode}, Step {step}, Reward: {reward.mean().item():.2f}, Done: {done.float().mean().item():.2f}, Bad Done: {bad_done.float().mean().item():.2f}, Timeout: {timeout.float().mean().item():.2f}, Env Step Time: {env_step_time:.4f}s, Agent Update Time: {agent_update_time:.4f}s, Epoch Time: {epoch_time:.4f}s")
 
-            epoch_time = time.time() - epoch_time
+            epoch_time = time.time() - epoch_time_temp
 
             # If all environments are done, break the loop and start a new episode
             if (done | bad_done | timeout).float().mean().item() == 1.0:
