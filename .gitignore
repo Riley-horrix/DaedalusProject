@@ -50,3 +50,5 @@ lib/*
 *.acmi
 
 __pycache__
+
+wandb

@@ -1,0 +1,12 @@
+{
+    "name": "env",
+    "env_name": "neural_plane",
+    "num_envs": 1024,
+    "buffer_capacity": 16384,
+    "episodes": 1000,
+    "episode_length": 2000,
+    "min_init_altitude": 3000.0,
+    "max_init_altitude": 8000.0,
+    "min_init_v": 220.0,
+    "max_init_v": 350.0
+}
