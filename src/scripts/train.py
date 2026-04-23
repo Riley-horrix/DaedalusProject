@@ -38,6 +38,7 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None):
     print("Starting training loop")
 
     for episode in range(env_config('episodes')):
+        print(f"Episode {episode} / {env_config('episodes')} starting...")
         # Reset environment and replay buffer at the start of each episode
         obs = env.reset()
         epoch_time = 0
@@ -75,7 +76,7 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None):
                         "env/reward": reward.mean().item(),
                         "env/done": done.float().mean().item(),
                         "env/bad_done": bad_done.float().mean().item(),
-                        "env/timeout": timeout.float().mean().item(),
+                        "env/timeout": timeout.float().mean().item()
                     }
                     log_dict.update(log.log)
                     run.log(log_dict, step=(episode * env_config('episode_length') + step))
@@ -85,7 +86,8 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None):
             epoch_time = time.time() - epoch_time
 
             # If all environments are done, break the loop and start a new episode
-            if real_done.float().mean().item() == 1.0:
+            if (done | bad_done | timeout).float().mean().item() == 1.0:
+                print(f"Episode {episode} completed.")
                 break
 
 
