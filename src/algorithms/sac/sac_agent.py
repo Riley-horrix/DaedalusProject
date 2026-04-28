@@ -168,8 +168,6 @@ class SACAgent(BaseAgent):
             rewards = rewards.view(self.batch_size * self.num_envs, 1)
             dones = dones.view(self.batch_size * self.num_envs, 1).float()
 
-
-
             # Critic update
             with torch.no_grad():
                 # Get next actions and entropy from current policy
@@ -257,7 +255,7 @@ class SACAgent(BaseAgent):
         torch.save(data, path)
 
     def load(self, path: str):
-        data = torch.load(path)
+        data = torch.load(path, map_location=self.device)
         self.actor.load_state_dict(data['actor_state_dict'])
         self.critic.load_state_dict(data['critic_state_dict'])
         self.critic_target.load_state_dict(data['critic_target_state_dict'])

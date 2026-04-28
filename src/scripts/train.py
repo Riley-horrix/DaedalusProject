@@ -100,4 +100,3 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None):
             if run is not None:
                 run.save(path)
         print("Model Saved.")
-

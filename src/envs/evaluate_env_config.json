@@ -1,0 +1,10 @@
+{
+    "name": "env",
+    "env_name": "neural_plane",
+    "num_envs": 10,
+    "epochs": 4096,
+    "min_init_altitude": 6000.0,
+    "max_init_altitude": 6000.0,
+    "min_init_v": 280.0,
+    "max_init_v": 280.0
+}
