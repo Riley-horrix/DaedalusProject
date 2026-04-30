@@ -78,9 +78,9 @@ class MiniACMI:
                         })
 
 def render_f16(filepaths):
-    fig = plt.figure(figsize=(10, 10)) # Made square for better 1:1 viewing
+    fig = plt.figure(figsize=(10, 10))
     ax = fig.add_subplot(111, projection='3d')
-    ax.set_title("F-16 Flight Path (True 1:1:1 Scale)")
+    ax.set_title("Agent flight paths and target waypoints")
     ax.set_xlabel("X - East/West (meters)")
     ax.set_ylabel("Y - North/South (meters)")
     ax.set_zlabel("Z - Altitude (meters)")
@@ -88,11 +88,7 @@ def render_f16(filepaths):
     colors = ['b', 'r', 'g', 'c', 'm', 'y']
     color_index = 0
 
-    # Track all converted coordinates for global bounding box
-    all_x = []
-    all_y = []
-    all_z = []
-
+    all_x, all_y, all_z = [], [], []
     origin_lon = None
     origin_lat = None
 
@@ -102,92 +98,104 @@ def render_f16(filepaths):
 
         acmi = MiniACMI(filepath)
 
-        targets = []
+        f16_objs = []
+        target_objs = []
         objects_iter = acmi.objects.values() if isinstance(acmi.objects, dict) else acmi.objects
 
+        # 1. Sort the objects into Planes and Targets
         for obj in objects_iter:
             name = getattr(obj, 'name', obj.get('name', ''))
             obj_type = getattr(obj, 'type', obj.get('type', ''))
-
             search_str = (str(name) + " " + str(obj_type)).upper()
 
             if "F-16" in search_str or "F16" in search_str or "VIPER" in search_str:
-                targets.append(obj)
+                f16_objs.append(obj)
+            elif "TARGET" in search_str or "WAYPOINT" in search_str:
+                target_objs.append(obj)
 
-        if not targets:
+        if not f16_objs:
             print(f"No F-16 objects found in {filename}.")
             continue
 
-        for i, target in enumerate(targets):
-            samples = getattr(target, 'samples', target.get('samples', []))
+        # 2. Plot F-16s (As Lines)
+        for i, plane in enumerate(f16_objs):
+            samples = getattr(plane, 'samples', plane.get('samples', []))
             if not samples: continue
 
             x_coords, y_coords, z_coords = [], [], []
-
             for s in samples:
-                # Extract raw values safely
                 raw_lon = s['lon'] if isinstance(s, dict) else getattr(s, 'lon', 0)
                 raw_lat = s['lat'] if isinstance(s, dict) else getattr(s, 'lat', 0)
                 raw_alt = s['alt'] if isinstance(s, dict) else getattr(s, 'alt', 0)
 
-                # Set the origin to the very first coordinate we process
                 if origin_lon is None:
-                    origin_lon = raw_lon
-                    origin_lat = raw_lat
+                    origin_lon, origin_lat = raw_lon, raw_lat
 
-                # Convert to meters
                 x, y = lonlat_to_meters(raw_lon, raw_lat, origin_lon, origin_lat)
-
                 x_coords.append(x)
                 y_coords.append(y)
                 z_coords.append(raw_alt)
 
             if not x_coords: continue
-
             all_x.extend(x_coords)
             all_y.extend(y_coords)
             all_z.extend(z_coords)
 
             color = colors[color_index % len(colors)]
-            obj_name = getattr(target, 'name', target.get('name', f"F-16 #{i+1}"))
-            display_name = f"{filename} - {obj_name}"
+            obj_name = getattr(plane, 'name', plane.get('name', f"F-16 #{i+1}"))
 
-            ax.plot(x_coords, y_coords, z_coords, label=display_name, color=color, linewidth=2)
-            ax.scatter(x_coords[0], y_coords[0], z_coords[0], color='green', marker='o', s=30)
-            ax.scatter(x_coords[-1], y_coords[-1], z_coords[-1], color='red', marker='^', s=50)
-            ax.text(x_coords[-1], y_coords[-1], z_coords[-1], f" {display_name}", fontsize=9)
-
+            ax.plot(x_coords, y_coords, z_coords, label=obj_name, color=color, linewidth=2)
+            ax.scatter(x_coords[0], y_coords[0], z_coords[0], color='green', marker='o', s=30) # Start
+            ax.scatter(x_coords[-1], y_coords[-1], z_coords[-1], color='red', marker='^', s=50) # End
             color_index += 1
 
-    # --- TRUE 1:1:1 EQUAL AXIS LOGIC ---
+        # 3. Plot Targets (As Static Stars)
+        for i, target in enumerate(target_objs):
+            samples = getattr(target, 'samples', target.get('samples', []))
+            if not samples: continue
+
+            # Just grab the first sample since the target is static
+            s = samples[0]
+            raw_lon = s['lon'] if isinstance(s, dict) else getattr(s, 'lon', 0)
+            raw_lat = s['lat'] if isinstance(s, dict) else getattr(s, 'lat', 0)
+            raw_alt = s['alt'] if isinstance(s, dict) else getattr(s, 'alt', 0)
+
+            if origin_lon is None:
+                origin_lon, origin_lat = raw_lon, raw_lat
+
+            x, y = lonlat_to_meters(raw_lon, raw_lat, origin_lon, origin_lat)
+
+            all_x.append(x)
+            all_y.append(y)
+            all_z.append(raw_alt)
+
+            obj_name = getattr(target, 'name', target.get('name', f"Target #{i+1}"))
+            ax.scatter(x, y, raw_alt, label=obj_name, color='blue', marker='*', s=150)
+
     if all_x and all_y and all_z:
-        # 1. Find the center point of the 3D data block
         mid_x = (min(all_x) + max(all_x)) / 2.0
         mid_y = (min(all_y) + max(all_y)) / 2.0
         mid_z = (min(all_z) + max(all_z)) / 2.0
 
-        # 2. Find the single largest dimension spread (X, Y, or Z)
         max_range = max(
             max(all_x) - min(all_x),
             max(all_y) - min(all_y),
             max(all_z) - min(all_z)
         ) / 2.0
+        max_range *= 1.05
 
-        max_range *= 1.05 # Add 5% padding so nothing touches the edge
-
-        # 3. Apply the exact same range from the center of all three axes
         ax.set_xlim(mid_x - max_range, mid_x + max_range)
         ax.set_ylim(mid_y - max_range, mid_y + max_range)
         ax.set_zlim(mid_z - max_range, mid_z + max_range)
 
-        # 4. Tell Matplotlib to draw the 3D box as a perfect cube
         try:
             ax.set_box_aspect((1, 1, 1))
         except AttributeError:
-            # Silently pass if user is on an ancient version of Matplotlib
             pass
 
-    ax.legend()
+    # Move legend outside the plot so it doesn't block the flight path
+    ax.legend(loc='center left', bbox_to_anchor=(1.05, 0.5))
+    plt.tight_layout()
     plt.show()
 
 if __name__ == "__main__":

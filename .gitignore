@@ -52,3 +52,5 @@ lib/*
 __pycache__
 
 wandb
+
+logs

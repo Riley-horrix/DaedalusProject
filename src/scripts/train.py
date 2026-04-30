@@ -37,66 +37,69 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None):
 
     print("Starting training loop")
 
-    for episode in range(env_config('episodes')):
-        print(f"Episode {episode} / {env_config('episodes')} starting...")
-        # Reset environment and replay buffer at the start of each episode
-        obs = env.reset()
-        epoch_time = 0
+    obs = env.reset()
 
-        for step in range(env_config('episode_length')):
-            epoch_time_temp = time.time()
-            with torch.no_grad():
-                action = agent.act(obs)
+    done_saved = torch.zeros(env.num_envs, dtype=torch.bool, device=device)
+    bad_done_saved = torch.zeros(env.num_envs, dtype=torch.bool, device=device)
+    timeout_saved = torch.zeros(env.num_envs, dtype=torch.bool, device=device)
 
-            env_step_time = time.time()
-            next_obs, reward, done, bad_done, timeout, info = env.step(action)
-            env_step_time = time.time() - env_step_time
+    epoch_time = time.time()
 
-            # Crash Filtering (Preventing NaNs from entering the buffer)
-            valid_mask = ~(torch.isnan(next_obs).any(dim=-1) | torch.isinf(next_obs).any(dim=-1))
-            real_done = done | ~valid_mask
+    for epoch in range(env_config('epochs')):
+        with torch.no_grad():
+            action = agent.act(obs)
 
-            # Store transition (Only store valid ones, or zero out broken ones)
-            buffer.push(obs, action, reward, next_obs, real_done)
+        next_obs, reward, done, bad_done, timeout, info = env.step(action)
 
-            obs = next_obs
+        # Track done/bad_done/timeout for logging
+        done_saved |= done
+        bad_done_saved |= bad_done
+        timeout_saved |= timeout
 
-            # Allow agent to train
-            agent_update_time = time.time()
-            agent.update(buffer, 1, log)
-            agent_update_time = time.time() - agent_update_time
+        # Crash Filtering (Preventing NaNs from entering the buffer)
+        valid_mask = ~(torch.isnan(next_obs).any(dim=-1) | torch.isinf(next_obs).any(dim=-1))
+        real_done = done | bad_done | ~valid_mask
 
-            # Log metrics every 10 steps
-            if (step + 1) % 10 == 0:
-                if run is not None:
-                    log_dict = {
-                        "time/env_step_time": env_step_time,
-                        "time/agent_update_time": agent_update_time,
-                        "time/epoch_time": epoch_time,
-                        "env/reward": reward.mean().item(),
-                        "env/done": done.float().mean().item(),
-                        "env/bad_done": bad_done.float().mean().item(),
-                        "env/timeout": timeout.float().mean().item()
-                    }
-                    log_dict.update(log.log)
-                    run.log(log_dict, step=(episode * env_config('episode_length') + step))
-                else:
-                    print(f"Episode {episode}, Step {step}, Reward: {reward.mean().item():.2f}, Done: {done.float().mean().item():.2f}, Bad Done: {bad_done.float().mean().item():.2f}, Timeout: {timeout.float().mean().item():.2f}, Env Step Time: {env_step_time:.4f}s, Agent Update Time: {agent_update_time:.4f}s, Epoch Time: {epoch_time:.4f}s")
+        # Store transition (Only store valid ones, or zero out broken ones)
+        buffer.push(obs, action, reward, next_obs, real_done)
 
-            epoch_time = time.time() - epoch_time_temp
+        obs = next_obs
 
-            # If all environments are done, break the loop and start a new episode
-            if (done | bad_done | timeout).float().mean().item() == 1.0:
-                print(f"Episode {episode} completed.")
-                break
+        # Allow agent to train every 10 steps
+        if (epoch + 1) % 10 == 0:
+            agent.update(buffer, 10, log)
 
+        # Log metrics every 100 steps
+        if (epoch + 1) % 100 == 0:
+            # Calculate epoch time
+            now_epoch_time = time.time() - epoch_time
+            average_epoch_time = now_epoch_time / 100
+            epoch_time = now_epoch_time
 
-        # Save the model at the end of each 10 episodes
+            if run is not None:
+                log_dict = {
+                    "time/average_epoch_time": average_epoch_time,
+                    "env/reward": reward.mean().item(),
+                    "env/done": done_saved.float().mean().item(),
+                    "env/bad_done": bad_done_saved.float().mean().item(),
+                    "env/timeout": timeout_saved.float().mean().item()
+                }
+                log_dict.update(log.log)
+                run.log(log_dict, step=epoch)
+            else:
+                print(f"Epoch {epoch}, Reward: {reward.mean().item():.2f}, Done: {done_saved.float().mean().item():.2f}, Bad Done: {bad_done_saved.float().mean().item():.2f}, Timeout: {timeout_saved.float().mean().item():.2f}, Epoch Time: {epoch_time:.4f}s")
+
+            # Reset done/bad_done/timeout trackers
+            done_saved[:] = False
+            bad_done_saved[:] = False
+            timeout_saved[:] = False
+
+        # Save the model after every 10k steps
         print("Episode Complete.")
-        if episode % 10 == 0:
+        if epoch % 10000 == 0:
             print("Saving model...")
-            path = f"{data_route}{agent_config('name')}_episode_{episode}.pt"
+            path = f"{data_route}{agent_config('name')}_epoch_{epoch//1000}k.pt"
             agent.save(path)
             if run is not None:
                 run.save(path)
-        print("Model Saved.")
+            print("Model Saved.")
