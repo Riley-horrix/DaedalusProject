@@ -39,11 +39,12 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None):
 
     obs = env.reset()
 
+    reward_saved = torch.zeros(env.num_envs, dtype=torch.float32, device=device)
     done_saved = torch.zeros(env.num_envs, dtype=torch.bool, device=device)
     bad_done_saved = torch.zeros(env.num_envs, dtype=torch.bool, device=device)
     timeout_saved = torch.zeros(env.num_envs, dtype=torch.bool, device=device)
 
-    epoch_time = time.time()
+    before_epoch_time = time.time()
 
     for epoch in range(env_config('epochs')):
         with torch.no_grad():
@@ -52,11 +53,12 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None):
         next_obs, reward, done, bad_done, timeout, info = env.step(action)
 
         # Track done/bad_done/timeout for logging
+        reward_saved += reward
         done_saved |= done
         bad_done_saved |= bad_done
         timeout_saved |= timeout
 
-        # Crash Filtering (Preventing NaNs from entering the buffer)
+        # Crash Filtering
         valid_mask = ~(torch.isnan(next_obs).any(dim=-1) | torch.isinf(next_obs).any(dim=-1))
         real_done = done | bad_done | ~valid_mask
 
@@ -66,20 +68,20 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None):
         obs = next_obs
 
         # Allow agent to train every 10 steps
-        if (epoch + 1) % 10 == 0:
+        if epoch % 10 == 0 and buffer.size >= agent_config('batch_size') * 100:
             agent.update(buffer, 10, log)
 
         # Log metrics every 100 steps
         if (epoch + 1) % 100 == 0:
             # Calculate epoch time
-            now_epoch_time = time.time() - epoch_time
-            average_epoch_time = now_epoch_time / 100
-            epoch_time = now_epoch_time
+            now_epoch_time = time.time()
+            epoch_time = (now_epoch_time - before_epoch_time) / 100
+            before_epoch_time = now_epoch_time
 
             if run is not None:
                 log_dict = {
-                    "time/average_epoch_time": average_epoch_time,
-                    "env/reward": reward.mean().item(),
+                    "time/average_epoch_time": epoch_time,
+                    "env/reward": (reward_saved / 100).mean().item(),
                     "env/done": done_saved.float().mean().item(),
                     "env/bad_done": bad_done_saved.float().mean().item(),
                     "env/timeout": timeout_saved.float().mean().item()

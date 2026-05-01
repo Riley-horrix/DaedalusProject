@@ -82,7 +82,7 @@ def run_evaluate(env_config: Config, agent_config: Config, models: list[str]):
     reward_history = []
     action_history = []
 
-    path = "./logs/sac/v2/"
+    path = "./logs/sac/v3/"
 
     print("Starting evaluation loop")
     for model_idx in range(len(models)):
@@ -99,9 +99,8 @@ def run_evaluate(env_config: Config, agent_config: Config, models: list[str]):
 
             next_obs, reward, done, bad_done, timeout, info = env.step(action)
 
-            reward_history.append(reward.squeeze().detach().cpu().numpy())
+            reward_history.append(reward_history[-1] if len(reward_history) > 0 else 0 + reward.squeeze().detach().cpu().numpy())
             action_history.append(action[1,:].squeeze().detach().cpu().numpy())
-
 
             mask |= done | bad_done | timeout
 
@@ -118,7 +117,7 @@ def run_evaluate(env_config: Config, agent_config: Config, models: list[str]):
                 filename=f"{path}evaluation_replay_{model_name}.acmi",
                 step_idx=epoch,
                 dt=env.env.model.dt,
-                # F-16 Model natively runs in feet, so convert to meters for Geodetic math!
+                # F-16 Model natively runs in feet, so convert to meters
                 npos=raw_npos * 0.3048,
                 epos=raw_epos * 0.3048,
                 alt=raw_alt * 0.3048,
@@ -134,18 +133,19 @@ def run_evaluate(env_config: Config, agent_config: Config, models: list[str]):
             obs = next_obs
 
             if mask.all():
-                print(f"Agent failed, reason - done: {done.float().mean()}, bad_done: {bad_done.float().mean()}, timeout: {timeout.float().mean()}")
+                print(f"All Agents Failed")
                 break
 
             if epoch % 100 == 0:
                 print(f"Epoch {epoch} / {env_config('epochs')}")
+
+
 
         print("Generating reward plot...")
         reward_matrix = np.array(reward_history)
 
         plt.figure(figsize=(12, 6))
 
-        # 1. Use a colormap to map the 100 agents into a rainbow of colors
         num_agents_to_plot = reward_matrix.shape[1]
         colors = plt.cm.jet(np.linspace(0, 1, num_agents_to_plot))
 
@@ -156,9 +156,6 @@ def run_evaluate(env_config: Config, agent_config: Config, models: list[str]):
         plt.title(f"Individual Agent Rewards Over Time\nModel: {model_name}")
         plt.xlabel("Simulation Steps")
         plt.ylabel("Reward Signal")
-
-        # 2. Limit the Y-axis to perfectly frame the flight behavior (-20 up to 5)
-        plt.ylim(-20, 5)
 
         plt.legend()
         plt.grid(True, alpha=0.4)

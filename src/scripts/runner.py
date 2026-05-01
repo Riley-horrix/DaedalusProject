@@ -14,6 +14,7 @@ if __name__ == "__main__":
     # Parse command line arguments for logging to wandb
     parser = argparse.ArgumentParser(description="Train a reinforcement learning agent.")
     parser.add_argument('--wandb', action='store_true', help="Whether to log training to wandb.")
+
     args = parser.parse_args()
 
     if args.wandb:
