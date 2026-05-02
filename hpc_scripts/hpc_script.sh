@@ -20,4 +20,6 @@ cmd="nvidia-smi"
 echo $(date +"%Y-%m-%d %H:%M:%S") runprogram: $cmd
 eval $cmd
 
+export WANDB_API_KEY=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
+
 python -m src.scripts.runner --wandb

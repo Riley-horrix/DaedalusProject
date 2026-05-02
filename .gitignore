@@ -54,3 +54,6 @@ __pycache__
 wandb
 
 logs
+
+*.e[0-9]*
+*.o[0-9]*
