@@ -3,9 +3,13 @@
 #PBS -lwalltime=48:00:00
 #PBS -lselect=1:ncpus=1:mem=32gb:ngpus=1
 
-# Load modules
-module load Python/3.12.3-GCCcore-13.3.0
+set -e
 
 cd $PBS_O_WORKDIR
 
+eval "$(~/miniforge3/bin/conda shell.bash hook)"
+conda activate pytorch_env
+
 python -m src.scripts.runner --wandb
+
+conda deactivate
