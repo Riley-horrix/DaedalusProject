@@ -3,6 +3,9 @@
 #PBS -lwalltime=2:00:00
 #PBS -lselect=1:ncpus=1:mem=16gb:ngpus=1
 
+#PBS -o ./logs/hpc/my_job.out
+#PBS -e ./logs/hpc/my_job.err
+
 set -e
 
 cd $PBS_O_WORKDIR
