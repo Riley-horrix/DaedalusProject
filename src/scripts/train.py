@@ -9,11 +9,7 @@ from src.algorithms.sac.sac_agent import SACAgent
 from src.configs.config import Config
 from src.utils.logging import LoggingStruct
 
-
-data_route = "/vol/bitbucket/rh1122/DaedalusProject/data/"
-
-
-def train(env_config: Config, agent_config: Config, run: wandb.Run | None):
+def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_path: str):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
@@ -100,7 +96,7 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None):
         print("Episode Complete.")
         if epoch % 10000 == 0:
             print("Saving model...")
-            path = f"{data_route}{agent_config('name')}_epoch_{epoch//1000}k.pt"
+            path = f"{data_path}{agent_config('name')}_epoch_{epoch//1000}k.pt"
             agent.save(path)
             if run is not None:
                 run.save(path)
