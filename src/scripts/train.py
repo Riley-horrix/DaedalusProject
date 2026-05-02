@@ -88,12 +88,12 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_
                 print(f"Epoch {epoch}, Reward: {reward.mean().item():.2f}, Done: {done_saved.float().mean().item():.2f}, Bad Done: {bad_done_saved.float().mean().item():.2f}, Timeout: {timeout_saved.float().mean().item():.2f}, Epoch Time: {epoch_time:.4f}s")
 
             # Reset done/bad_done/timeout trackers
+            reward_saved[:] = 0.0
             done_saved[:] = False
             bad_done_saved[:] = False
             timeout_saved[:] = False
 
         # Save the model after every 10k steps
-        print("Episode Complete.")
         if epoch % 10000 == 0:
             print("Saving model...")
             path = f"{data_path}{agent_config('name')}_epoch_{epoch//1000}k.pt"
