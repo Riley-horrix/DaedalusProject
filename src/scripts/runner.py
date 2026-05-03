@@ -15,13 +15,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train a reinforcement learning agent.")
     parser.add_argument('--wandb', action='store_true', help="Whether to log training to wandb.")
     parser.add_argument('--data_path', type=str, default="/vol/bitbucket/rh1122/DaedalusProject/data/", help="Path to save training data and logs.")
+    parser.add_argument('--load_model', type=str, default=None, help="Path to a saved model to load for training.")
 
     args = parser.parse_args()
 
     if args.wandb:
         print("Logging to wandb enabled.")
         with wandb.init(project="DaedalusProject", config={**env_config.data, **agent_config.data}) as run:
-            train(env_config, agent_config, run, args.data_path)
+            train(env_config, agent_config, run, args.data_path, args.load_model)
     else:
         print("Logging to wandb disabled. Training will proceed without logging.")
-        train(env_config, agent_config, None, args.data_path)
+        train(env_config, agent_config, None, args.data_path, args.load_model)

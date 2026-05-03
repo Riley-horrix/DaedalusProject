@@ -9,9 +9,11 @@ from src.algorithms.sac.sac_agent import SACAgent
 from src.configs.config import Config
 from src.utils.logging import LoggingStruct
 
-def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_path: str):
+def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_path: str, load_model: str | None):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
+
+    start_time = round(time.time())
 
     # Init environment
     env = env_from_config(env_config, device=device)
@@ -30,6 +32,11 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_
 
     # Init logging
     log = LoggingStruct()
+
+    # Load pre-trained model if specified
+    if load_model is not None:
+        print(f"Loading model from {load_model}...")
+        agent.load(load_model)
 
     print("Starting training loop")
 
@@ -64,7 +71,7 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_
         obs = next_obs
 
         # Allow agent to train every 10 steps
-        if epoch % 10 == 0 and buffer.size >= agent_config('batch_size') * 100:
+        if epoch > 1000 and epoch % 10 == 0:
             agent.update(buffer, 10, log)
 
         # Log metrics every 100 steps
@@ -96,7 +103,7 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_
         # Save the model after every 10k steps
         if epoch % 10000 == 0:
             print("Saving model...")
-            path = f"{data_path}{agent_config('name')}_epoch_{epoch//1000}k.pt"
+            path = f"{data_path}{agent_config('name')}_{start_time}_epoch_{epoch//1000}k.pt"
             agent.save(path)
             if run is not None:
                 run.save(path)

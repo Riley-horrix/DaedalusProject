@@ -82,7 +82,7 @@ def run_evaluate(env_config: Config, agent_config: Config, models: list[str]):
     reward_history = []
     action_history = []
 
-    path = "./logs/sac/v3/"
+    path = "./logs/sac/v4/"
 
     print("Starting evaluation loop")
     for model_idx in range(len(models)):
@@ -167,16 +167,24 @@ def run_evaluate(env_config: Config, agent_config: Config, models: list[str]):
         print(f"Saved reward plot to {plot_path}")
 
         # Now plot each of the 4 action dimensions over time, for the first agent, with each action dimension in a subplot
+        action_dimensions = ["Thrust", "Elevator", "Aileron", "Rudder"]
         action_matrix = np.array(action_history)
         plt.subplots(2, 2, figsize=(12, 8))
         for i in range(action_matrix.shape[1]):
             plt.subplot(2, 2, i+1)
-            plt.plot(action_matrix[:, i], alpha=0.4, label=f"Action {i+1}")
+            plt.plot(action_matrix[:, i], alpha=0.4, label=f"Action {action_dimensions[i]}")
             plt.title(f"Action Dimension {i+1} Over Time\nModel: {model_name}")
             plt.xlabel("Simulation Steps")
             plt.ylabel("Control Signal")
             plt.legend()
             plt.grid(True, alpha=0.4)
+        # Now also plot a time smoothed curve of the data
+        plotted_steps = np.arange(action_matrix.shape[0])
+        for i in range(action_matrix.shape[1]):
+            smoothed = np.convolve(action_matrix[:, i], np.ones(100)/100, mode='valid')
+            plt.subplot(2, 2, i+1)
+            plt.plot(plotted_steps[:len(smoothed)], smoothed, color='red', label=f"Smoothed Action {action_dimensions[i]}")
+            plt.legend()
         plt.tight_layout()
         plot_path = f"{path}evaluation_actions_subplots_{model_name}.png"
         plt.savefig(plot_path, dpi=300)
