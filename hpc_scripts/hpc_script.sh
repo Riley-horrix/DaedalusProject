@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#PBS -lwalltime=24:00:00
+#PBS -lwalltime=70:00:00
 #PBS -lselect=1:ncpus=1:mem=32gb:ngpus=1
 
 #PBS -o ./logs/hpc/my_job.out
@@ -25,4 +25,4 @@ eval $cmd
 
 export WANDB_API_KEY=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
 
-python -m src.scripts.runner --wandb --data_path=./data/
+python -m src.scripts.runner --wandb --data_path=./data/ --load_model=./data/sac_agent_epoch_260k.pt
