@@ -149,6 +149,8 @@ def render_f16(filepaths):
             ax.scatter(x_coords[-1], y_coords[-1], z_coords[-1], color='red', marker='^', s=50) # End
             color_index += 1
 
+        color_index = 0
+
         # 3. Plot Targets (As Static Stars)
         for i, target in enumerate(target_objs):
             samples = getattr(target, 'samples', target.get('samples', []))
@@ -165,12 +167,15 @@ def render_f16(filepaths):
 
             x, y = lonlat_to_meters(raw_lon, raw_lat, origin_lon, origin_lat)
 
+            color = colors[color_index % len(colors)]
+            color_index += 1
+
             all_x.append(x)
             all_y.append(y)
             all_z.append(raw_alt)
 
             obj_name = getattr(target, 'name', target.get('name', f"Target #{i+1}"))
-            ax.scatter(x, y, raw_alt, label=obj_name, color='blue', marker='*', s=150)
+            ax.scatter(x, y, raw_alt, label=obj_name, color=color, marker='*', s=150)
 
     if all_x and all_y and all_z:
         mid_x = (min(all_x) + max(all_x)) / 2.0

@@ -30,7 +30,7 @@ class ReplayBuffer:
 
         print(f"Total VRAM usage by replay buffer: {self.obs.element_size() * self.obs.nelement() * 5 / (1024 ** 3):.2f} GB")
 
-        self.printer = rlp.RateLimitedPrinter(interval=5.0)
+        self.printer = rlp.RateLimitedPrinter(interval=60*5)
 
     def push(self, obs: torch.Tensor, action: torch.Tensor, reward: torch.Tensor, next_obs: torch.Tensor, done: torch.Tensor):
         """Push batched replay data into buffer.

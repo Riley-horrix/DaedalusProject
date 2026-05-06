@@ -200,4 +200,4 @@ if __name__ == "__main__":
 
     print(f"Evaluating models, {sys.argv[1:]}")
 
-    run_evaluate(env_config, agent_config, sys.argv[1:])
+    run_evaluate(env_config, agent_config, sys.argv[2:], sys.argv[1])
