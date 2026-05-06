@@ -9,11 +9,16 @@ from src.algorithms.sac.sac_agent import SACAgent
 from src.configs.config import Config
 from src.utils.logging import LoggingStruct
 
+from src.scripts.evaluate import run_evaluate
+
 def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_path: str, load_model: str | None):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
     start_time = round(time.time())
+
+    evaluate_env_config = Config('evaluate_env')
+    evaluate_env_config.load_from_file('src/envs/evaluate_env_config.json')
 
     # Init environment
     env = env_from_config(env_config, device=device)
@@ -108,3 +113,6 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_
             if run is not None:
                 run.save(path)
             print("Model Saved.")
+
+            # Also run an evaluation step here and save evaluation results
+            run_evaluate(evaluate_env_config, agent_config, [path], data_path)

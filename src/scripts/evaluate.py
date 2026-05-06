@@ -57,7 +57,7 @@ def export_batch_acmi(filename, step_idx, dt, npos, epos, alt, roll, pitch, yaw,
                 f.write(f"{t_id},T={t_lon}|{t_lat}|{t_h}\n")
 
 
-def run_evaluate(env_config: Config, agent_config: Config, models: list[str]):
+def run_evaluate(env_config: Config, agent_config: Config, models: list[str], path_base: str):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
@@ -82,7 +82,7 @@ def run_evaluate(env_config: Config, agent_config: Config, models: list[str]):
     reward_history = []
     action_history = []
 
-    path = "./logs/sac/v4/"
+    path = path_base
 
     print("Starting evaluation loop")
     for model_idx in range(len(models)):
