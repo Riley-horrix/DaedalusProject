@@ -1,5 +1,5 @@
 {
-    "name": "env",
+    "name": "evaluate_env",
     "env_name": "neural_plane",
     "env_type": "attitude",
     "num_envs": 10,

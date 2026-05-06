@@ -115,4 +115,4 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_
             print("Model Saved.")
 
             # Also run an evaluation step here and save evaluation results
-            run_evaluate(evaluate_env_config, agent_config, [path], data_path)
+            # run_evaluate(evaluate_env_config, agent_config, [path], data_path)
