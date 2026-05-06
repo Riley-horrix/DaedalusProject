@@ -1,6 +1,7 @@
 {
     "name": "env",
     "env_name": "neural_plane",
+    "env_type": "control",
     "num_envs": 1024,
     "buffer_capacity": 65536,
     "epochs": 1000000,
