@@ -17,9 +17,9 @@ class NeuralPlaneEnv(BaseEnv):
     def __init__(self, config: Config, device: torch.device):
         super().__init__(config, num_envs=config('num_envs', default=1), obs_dim=22, action_dim=4, device=device)
 
-        if config('env_type') == 'control':
+        if config('env_type') == 'tracking':
             self.env = ControlEnv(num_envs=self.num_envs, config='tracking', model='F16', device=device)
-        elif config('env_type') == 'attitude':
+        elif config('env_type') == 'control':
             self.env = ControlEnv(num_envs=self.num_envs, config='control', model='F16', device=device)
         else:
             raise ValueError(f"Unsupported env_type: {config('env_type')}")

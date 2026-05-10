@@ -7,7 +7,7 @@ class LayeredSACAgent(SACAgent):
         SACAgent (_type_): _description_
     """
     def __init__(self, obs_dim, action_dim, num_envs, device, config, attitude_config):
-        super().__init__(obs_dim, action_dim, num_envs, device, config)
+        super().__init__(obs_dim, 3, num_envs, device, config)
 
         self.attitude_agent = SACAgent(obs_dim, action_dim, num_envs, device, attitude_config)
 

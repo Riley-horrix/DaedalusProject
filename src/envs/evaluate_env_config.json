@@ -1,7 +1,7 @@
 {
     "name": "evaluate_env",
     "env_name": "neural_plane",
-    "env_type": "attitude",
+    "env_type": "control",
     "num_envs": 10,
     "epochs": 4096,
     "min_init_altitude": 6000.0,

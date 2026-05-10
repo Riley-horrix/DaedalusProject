@@ -11,7 +11,7 @@ from src.configs.config import Config
 from src.envs.base_env import env_from_config
 from src.utils.math import enu_to_geodetic
 
-def export_batch_acmi(filename, step_idx, dt, npos, epos, alt, roll, pitch, yaw, t_npos, t_epos, t_alt, mask=None):
+def export_batch_acmi(filename, step_idx, dt, npos, epos, alt, roll, pitch, yaw, t_npos=None, t_epos=None, t_alt=None, t_pitch=None, t_heading=None, mask=None):
     os.makedirs(os.path.dirname(filename), exist_ok=True)
     mode = 'w' if step_idx == 0 else 'a'
     current_time = step_idx * dt
@@ -45,16 +45,27 @@ def export_batch_acmi(filename, step_idx, dt, npos, epos, alt, roll, pitch, yaw,
             else:
                 f.write(f"{obj_id},T={lon}|{lat}|{h}|{r}|{p}|{y_ang}\n")
 
-            t_n = t_npos[i].item()
-            t_e = t_epos[i].item()
-            t_a = t_alt[i].item()
-            t_lat, t_lon, t_h = enu_to_geodetic(t_e, t_n, t_a, 0, 0, 0)
+            if t_npos is not None and t_epos is not None and t_alt is not None and t_pitch is not None and t_heading is not None:
+                t_n = t_npos[i].item()
+                t_e = t_epos[i].item()
+                t_a = t_alt[i].item()
+                t_lat, t_lon, t_h = enu_to_geodetic(t_e, t_n, t_a, 0, 0, 0)
 
-            t_id = f"T{100 + i}"
-            if step_idx == 0:
-                f.write(f"{t_id},T={t_lon}|{t_lat}|{t_h},Name=Target #{i+1},Type=Waypoint,Color=Blue\n")
-            else:
-                f.write(f"{t_id},T={t_lon}|{t_lat}|{t_h}\n")
+                t_id = f"T{100 + i}"
+                if step_idx == 0:
+                    f.write(f"{t_id},T={t_lon}|{t_lat}|{t_h},Name=Target #{i+1},Type=Waypoint,Color=Blue\n")
+                else:
+                    f.write(f"{t_id},T={t_lon}|{t_lat}|{t_h}\n")
+
+            if t_pitch is not None and t_heading is not None:
+                t_p = math.degrees(t_pitch[i].item())
+                t_y = math.degrees(t_heading[i].item())
+                t_id = f"T{100 + i}"
+
+                if step_idx == 0:
+                    f.write(f"{t_id},T={lon}|{lat}|{h}|0|{t_p}|{t_y},Name=Target #{i+1},Type=Waypoint,Color=Blue\n")
+                else:
+                    f.write(f"{t_id},T={lon}|{lat}|{h}|0|{t_p}|{t_y}\n")
 
 
 def run_evaluate(env_config: Config, agent_config: Config, models: list[str], path_base: str):
@@ -84,6 +95,8 @@ def run_evaluate(env_config: Config, agent_config: Config, models: list[str], pa
 
     path = path_base
 
+    tracking_task = env_config('env_type') == 'tracking'
+
     print("Starting evaluation loop")
     for model_idx in range(len(models)):
         print(f"Evaluating {models[model_idx]}")
@@ -99,7 +112,7 @@ def run_evaluate(env_config: Config, agent_config: Config, models: list[str], pa
 
             next_obs, reward, done, bad_done, timeout, info = env.step(action)
 
-            reward_history.append(reward_history[-1] if len(reward_history) > 0 else 0 + reward.squeeze().detach().cpu().numpy())
+            reward_history.append(reward_history[-1] + reward.squeeze().detach().cpu().numpy() if len(reward_history) > 0 else 0 + reward.squeeze().detach().cpu().numpy())
             action_history.append(action[1,:].squeeze().detach().cpu().numpy())
 
             mask |= done | bad_done | timeout
@@ -108,9 +121,18 @@ def run_evaluate(env_config: Config, agent_config: Config, models: list[str], pa
             roll, pitch, yaw = env.env.model.get_posture()
 
             # Pull the target coordinates from the task memory
-            t_npos = env.env.task.target_npos
-            t_epos = env.env.task.target_epos
-            t_alt = env.env.task.target_altitude
+            if tracking_task:
+                t_npos = env.env.task.target_npos
+                t_epos = env.env.task.target_epos
+                t_alt = env.env.task.target_altitude
+                t_pitch = None
+                t_heading = None
+            else:
+                t_npos = None
+                t_epos = None
+                t_alt = None
+                t_pitch = env.env.task.target_pitch
+                t_heading = env.env.task.target_heading
 
             # Export telemetry to Tacview ACMI format
             export_batch_acmi(
@@ -124,9 +146,11 @@ def run_evaluate(env_config: Config, agent_config: Config, models: list[str], pa
                 roll=roll,
                 pitch=pitch,
                 yaw=yaw,
-                t_npos=t_npos * 0.3048,
-                t_epos=t_epos * 0.3048,
-                t_alt=t_alt * 0.3048,
+                t_npos=t_npos * 0.3048 if t_npos is not None else None,
+                t_epos=t_epos * 0.3048 if t_epos is not None else None,
+                t_alt=t_alt * 0.3048 if t_alt is not None else None,
+                t_pitch=t_pitch,
+                t_heading=t_heading,
                 mask=mask
             )
 
@@ -192,12 +216,12 @@ def run_evaluate(env_config: Config, agent_config: Config, models: list[str], pa
         print(f"Saved action subplot to {plot_path}")
 
 if __name__ == "__main__":
-    env_config = Config('env')
+    env_config = Config('evaluate_env')
     agent_config = Config('sac_agent')
 
     env_config.load_from_file('src/envs/evaluate_env_config.json')
     agent_config.load_from_file('src/algorithms/sac/sac_config.json')
 
-    print(f"Evaluating models, {sys.argv[1:]}")
+    print(f"Evaluating models, {sys.argv[2:]}")
 
     run_evaluate(env_config, agent_config, sys.argv[2:], sys.argv[1])
