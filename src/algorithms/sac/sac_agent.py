@@ -59,6 +59,8 @@ class GaussianActor(nn.Module):
         self.LOG_STD_MAX = 2.0
         self.LOG_STD_MIN = -20.0
 
+        self.apply(self._orthogonal_init)
+
     def _orthogonal_init(self, module):
         """Orthogonal initialization for linear layers, with special handling for the final action output layer to ensure initial actions are near zero.
 
@@ -216,7 +218,7 @@ class SACAgent(BaseAgent):
             # Alpha update
             # We want to tune alpha so that the policy's entropy matches our target_entropy (-4.0)
             # We have to detach the log probs so gradients don't flow back into the Actor again
-            alpha_loss = -(self.log_alpha.exp() * (log_probs + self.target_entropy).detach()).mean()
+            alpha_loss = -(self.log_alpha * (log_probs + self.target_entropy).detach()).mean()
 
             # Optimize Alpha
             self.alpha_optim.zero_grad()
@@ -263,3 +265,4 @@ class SACAgent(BaseAgent):
         self.critic_optim.load_state_dict(data['optimizer_state_dict']['critic'])
         self.alpha_optim.load_state_dict(data['optimizer_state_dict']['alpha'])
         self.log_alpha = data['log_alpha']
+        self.log_alpha.data.copy_(data['log_alpha'].data)
