@@ -54,9 +54,17 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_
 
     before_epoch_time = time.time()
 
+    obs_mean = torch.zeros(obs_dim, device=device)
+    obs_var = torch.ones(obs_dim, device=device)
+
     for epoch in range(env_config('epochs')):
         with torch.no_grad():
             action = agent.act(obs)
+
+        # Update mean and std of observations for logging
+        obs_mean = 0.99 * obs_mean + 0.01 * obs.mean(dim=0)
+        obs_var = 0.99 * obs_var + 0.01 * obs.var(dim=0)
+
 
         next_obs, reward, done, bad_done, timeout, info = env.step(action)
 
@@ -85,6 +93,9 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_
             now_epoch_time = time.time()
             epoch_time = (now_epoch_time - before_epoch_time) / 100
             before_epoch_time = now_epoch_time
+
+            mean_var_dict = {f"obs_mean/{i}": obs_mean[i].item() for i in range(obs_dim)}
+            mean_var_dict.update({f"obs_var/{i}": obs_var[i].item() for i in range(obs_dim)})
 
             if run is not None:
                 log_dict = {
