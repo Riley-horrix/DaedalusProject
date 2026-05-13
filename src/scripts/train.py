@@ -106,6 +106,7 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_
                     "env/timeout": timeout_saved.float().mean().item()
                 }
                 log_dict.update(log.log)
+                log_dict.update(mean_var_dict)
                 run.log(log_dict, step=epoch)
             else:
                 print(f"Epoch {epoch}, Reward: {reward.mean().item():.2f}, Done: {done_saved.float().mean().item():.2f}, Bad Done: {bad_done_saved.float().mean().item():.2f}, Timeout: {timeout_saved.float().mean().item():.2f}, Epoch Time: {epoch_time:.4f}s")
@@ -119,8 +120,11 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_
         # Save the model after every 10k steps
         if epoch % 10000 == 0:
             print("Saving model...")
-            path = f"{data_path}{agent_config('name')}_{start_time}_epoch_{epoch//1000}k.pt"
+            run_name = wandb.run.name if wandb.run is not None else f"{start_time}"
+            path = f"{data_path}{agent_config('name')}_{run_name}_recent.pt"
             agent.save(path)
+            wandb.save(path)
+            # Get run name from wandb
             if run is not None:
                 run.save(path)
             print("Model Saved.")
