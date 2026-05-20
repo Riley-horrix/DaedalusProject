@@ -14,16 +14,16 @@ class DoubleQCritic(nn.Module):
         super().__init__()
         self.q1 = nn.Sequential(
             nn.Linear(obs_dim + action_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
+            nn.SiLU(),
+            # nn.Linear(hidden_dim, hidden_dim),
+            # nn.SiLU(),
             nn.Linear(hidden_dim, 1)
         )
         self.q2 = nn.Sequential(
             nn.Linear(obs_dim + action_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
+            nn.SiLU(),
+            # nn.Linear(hidden_dim, hidden_dim),
+            # nn.SiLU(),
             nn.Linear(hidden_dim, 1)
         )
 
@@ -47,9 +47,9 @@ class GaussianActor(nn.Module):
         super().__init__()
         self.x1 = nn.Sequential(
             nn.Linear(obs_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
+            nn.SiLU(),
+            # nn.Linear(hidden_dim, hidden_dim),
+            # nn.SiLU(),
         )
 
         self.mean_layer = nn.Linear(hidden_dim, action_dim)
@@ -67,6 +67,7 @@ class GaussianActor(nn.Module):
         Args:
             module (nn.Linear): The linear layer to initialize.
         """
+        pass
         if isinstance(module, nn.Linear):
             # For the final layer, initialise weights with a smaller gain to keep initial actions near zero
             if module == self.mean_layer:
