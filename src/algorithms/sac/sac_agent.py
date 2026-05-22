@@ -196,6 +196,7 @@ class SACAgent(BaseAgent):
             # Optimize Critic
             self.critic_optim.zero_grad()
             critic_loss.backward()
+            torch.nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm=1.0)
             self.critic_optim.step()
 
             # Actor update
@@ -213,6 +214,7 @@ class SACAgent(BaseAgent):
             # Optimize Actor
             self.actor_optim.zero_grad()
             actor_loss.backward()
+            torch.nn.utils.clip_grad_norm_(self.actor.parameters(), max_norm=1.0)
             self.actor_optim.step()
 
             # Alpha update
