@@ -15,15 +15,15 @@ class DoubleQCritic(nn.Module):
         self.q1 = nn.Sequential(
             nn.Linear(obs_dim + action_dim, hidden_dim),
             nn.SiLU(),
-            # nn.Linear(hidden_dim, hidden_dim),
-            # nn.SiLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.SiLU(),
             nn.Linear(hidden_dim, 1)
         )
         self.q2 = nn.Sequential(
             nn.Linear(obs_dim + action_dim, hidden_dim),
             nn.SiLU(),
-            # nn.Linear(hidden_dim, hidden_dim),
-            # nn.SiLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.SiLU(),
             nn.Linear(hidden_dim, 1)
         )
 
@@ -48,8 +48,8 @@ class GaussianActor(nn.Module):
         self.x1 = nn.Sequential(
             nn.Linear(obs_dim, hidden_dim),
             nn.SiLU(),
-            # nn.Linear(hidden_dim, hidden_dim),
-            # nn.SiLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.SiLU(),
         )
 
         self.mean_layer = nn.Linear(hidden_dim, action_dim)
@@ -67,7 +67,6 @@ class GaussianActor(nn.Module):
         Args:
             module (nn.Linear): The linear layer to initialize.
         """
-        pass
         if isinstance(module, nn.Linear):
             # For the final layer, initialise weights with a smaller gain to keep initial actions near zero
             if module == self.mean_layer:
@@ -109,7 +108,7 @@ class GaussianActor(nn.Module):
         log_prob = normal.log_prob(x_t)
 
         # Enforcing action bounds (see appendix C of SAC paper for details)
-        log_prob -= torch.log(1 - y_t.pow(2) + 1e-6)
+        log_prob -= (2.0 * (np.log(2.0) - x_t - F.softplus(-2.0 * x_t)))
         log_prob = log_prob.sum(1, keepdim=True)
 
         return action, log_prob, torch.tanh(mean)
@@ -265,5 +264,4 @@ class SACAgent(BaseAgent):
         self.actor_optim.load_state_dict(data['optimizer_state_dict']['actor'])
         self.critic_optim.load_state_dict(data['optimizer_state_dict']['critic'])
         self.alpha_optim.load_state_dict(data['optimizer_state_dict']['alpha'])
-        self.log_alpha = data['log_alpha']
         self.log_alpha.data.copy_(data['log_alpha'].data)
