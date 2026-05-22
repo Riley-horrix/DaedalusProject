@@ -163,9 +163,9 @@ class SACAgent(BaseAgent):
             # This is of shape [batch_size, num_envs, ...], so we need to reshape it to [batch_size * num_envs, ...] for processing
             obs, actions, rewards, next_obs, dones = replay_buffer.sample(self.batch_size)
 
-            obs = obs.view(self.batch_size * self.num_envs, self.obs_dim)
-            actions = actions.view(self.batch_size * self.num_envs, self.action_dim)
-            next_obs = next_obs.view(self.batch_size * self.num_envs, self.obs_dim)
+            obs = obs[..., :self.obs_dim].view(self.batch_size * self.num_envs, self.obs_dim)
+            actions = actions[..., :self.action_dim].view(self.batch_size * self.num_envs, self.action_dim)
+            next_obs = next_obs[..., :self.obs_dim].view(self.batch_size * self.num_envs, self.obs_dim)
 
             rewards = rewards.view(self.batch_size * self.num_envs, 1)
             dones = dones.view(self.batch_size * self.num_envs, 1).float()
