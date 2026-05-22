@@ -33,7 +33,7 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_
     algorithm = agent_config('name')
     if algorithm == "sac_agent":
         agent = SACAgent(obs_dim, action_dim, env_config('num_envs'), device, agent_config)
-    if algorithm == "attitude_agent":
+    elif algorithm == "attitude_agent":
         agent = AttitudeAgent(obs_dim, action_dim, env_config('num_envs'), device, agent_config)
     else:
         raise ValueError(f"Unsupported algorithm: {algorithm}")
