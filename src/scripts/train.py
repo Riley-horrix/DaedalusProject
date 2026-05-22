@@ -34,6 +34,7 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_
     if algorithm == "sac_agent":
         agent = SACAgent(obs_dim, action_dim, env_config('num_envs'), device, agent_config)
     elif algorithm == "attitude_agent":
+        obs_dim = 14
         agent = AttitudeAgent(obs_dim, action_dim, env_config('num_envs'), device, agent_config)
     else:
         raise ValueError(f"Unsupported algorithm: {algorithm}")
@@ -57,6 +58,7 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_
 
     before_epoch_time = time.time()
 
+    print(f"Observation space: {obs_dim}, Action space: {action_dim}")
     obs_mean = torch.zeros(obs_dim, device=device)
     obs_var = torch.ones(obs_dim, device=device)
 
