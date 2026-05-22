@@ -21,6 +21,8 @@ class NeuralPlaneEnv(BaseEnv):
             self.env = ControlEnv(num_envs=self.num_envs, config='tracking', model='F16', device=device)
         elif config('env_type') == 'control':
             self.env = ControlEnv(num_envs=self.num_envs, config='control', model='F16', device=device)
+        elif config('env_type') == 'attitude':
+            self.env = ControlEnv(num_envs=self.num_envs, config='attitude', model='F16', device=device)
         else:
             raise ValueError(f"Unsupported env_type: {config('env_type')}")
 
