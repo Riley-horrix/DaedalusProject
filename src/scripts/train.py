@@ -26,9 +26,6 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_
     obs_dim = env.obs_dim
     action_dim = env.action_dim
 
-    # Init buffer
-    buffer = ReplayBuffer(obs_dim, action_dim, env_config('buffer_capacity'), env_config('num_envs'), device)
-
     # Init agent
     algorithm = agent_config('name')
     if algorithm == "sac_agent":
@@ -38,6 +35,9 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_
         agent = AttitudeAgent(obs_dim, action_dim, env_config('num_envs'), device, agent_config)
     else:
         raise ValueError(f"Unsupported algorithm: {algorithm}")
+
+    # Init buffer
+    buffer = ReplayBuffer(obs_dim, action_dim, env_config('buffer_capacity'), env_config('num_envs'), device)
 
     # Init logging
     log = LoggingStruct()
