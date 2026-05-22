@@ -6,6 +6,7 @@ import wandb
 from src.envs.base_env import env_from_config
 from src.utils.replay_buffer import ReplayBuffer
 from src.algorithms.sac.sac_agent import SACAgent
+from src.algorithms.sac.attitude_agent import AttitudeAgent
 from src.configs.config import Config
 from src.utils.logging import LoggingStruct
 
@@ -32,6 +33,8 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_
     algorithm = agent_config('name')
     if algorithm == "sac_agent":
         agent = SACAgent(obs_dim, action_dim, env_config('num_envs'), device, agent_config)
+    if algorithm == "attitude_agent":
+        agent = AttitudeAgent(obs_dim, action_dim, env_config('num_envs'), device, agent_config)
     else:
         raise ValueError(f"Unsupported algorithm: {algorithm}")
 
@@ -65,7 +68,6 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_
         obs_mean = 0.99 * obs_mean + 0.01 * obs.mean(dim=0)
         obs_var = 0.99 * obs_var + 0.01 * obs.var(dim=0)
 
-
         next_obs, reward, done, bad_done, timeout, info = env.step(action)
 
         # Track done/bad_done/timeout for logging
@@ -77,6 +79,9 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_
         # Crash Filtering
         valid_mask = ~(torch.isnan(next_obs).any(dim=-1) | torch.isinf(next_obs).any(dim=-1))
         real_done = done | bad_done | ~valid_mask
+
+        if algorithm == "attitude_agent":
+            agent.reset_pid_states(real_done)
 
         # Store transition (Only store valid ones, or zero out broken ones)
         buffer.push(obs, action, reward, next_obs, real_done)
@@ -103,7 +108,9 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_
                     "env/reward": (reward_saved / 100).mean().item(),
                     "env/done": done_saved.float().mean().item(),
                     "env/bad_done": bad_done_saved.float().mean().item(),
-                    "env/timeout": timeout_saved.float().mean().item()
+                    "env/timeout": timeout_saved.float().mean().item(),
+                    "velocity/total_error": obs[:, -1].abs().mean().item(),
+                    "velocity/first_error": torch.abs(obs[0, -1]).item(),
                 }
                 log_dict.update(log.log)
                 log_dict.update(mean_var_dict)

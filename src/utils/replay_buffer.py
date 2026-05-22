@@ -54,9 +54,9 @@ class ReplayBuffer:
         self.size = min(self.size + 1, self.capacity)
         self.actual_size += 1
 
-        if self.size == self.capacity:
-            self.max_overrun = max(self.max_overrun, self.actual_size - self.capacity)
-            self.printer(f"Replay buffer is full - oldest data will be overwritten.\nConsider increasing capacity or reducing episode length to capture early episode data.\nMax overrun so far: {self.max_overrun} episodes")
+        # if self.size == self.capacity:
+            # self.max_overrun = max(self.max_overrun, self.actual_size - self.capacity)
+            # self.printer(f"Replay buffer is full - oldest data will be overwritten.\nConsider increasing capacity or reducing episode length to capture early episode data.\nMax overrun so far: {self.max_overrun} episodes")
 
     def sample(self, batch_size: int):
         """Sample a batch of random samples from the replay buffer.

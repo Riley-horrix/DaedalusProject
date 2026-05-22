@@ -1,0 +1,15 @@
+{
+    "name": "attitude_agent",
+    "actor_learning_rate": 0.0001,
+    "actor_weight_decay": 0.0,
+    "critic_learning_rate": 0.0003,
+    "critic_weight_decay": 0.0,
+    "alpha_learning_rate": 0.00003,
+    "alpha_weight_decay": 0.0,
+    "gamma": 0.999,
+    "tau": 0.005,
+    "batch_size": 1024,
+    "init_alpha": 0.2,
+    "actor_hidden_dim": 512,
+    "critic_hidden_dim": 512
+}
