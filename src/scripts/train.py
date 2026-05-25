@@ -111,7 +111,7 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_
                     "env/done": done_saved.float().mean().item(),
                     "env/bad_done": bad_done_saved.float().mean().item(),
                     "env/timeout": timeout_saved.float().mean().item(),
-                    "velocity/total_error": obs[:, -1].abs().mean().item(),
+                    "velocity/total_error": obs[:, -1].abs().sum().item(),
                     "velocity/first_error": torch.abs(obs[0, -1]).item(),
                 }
                 log_dict.update(log.log)
