@@ -64,7 +64,7 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_
     obs_var = torch.ones(obs_dim, device=device)
 
     # Define warmup steps for TD3 (defaulting to 10k as per the paper)
-    warmup_steps = env_config.get('warmup_steps', 10000)
+    warmup_steps = env_config('warmup_steps', 10000)
 
     for epoch in range(env_config('epochs')):
         with torch.no_grad():

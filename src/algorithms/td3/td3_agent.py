@@ -65,10 +65,10 @@ class TD3Agent(BaseAgent):
         self.batch_size = config('batch_size')
 
         # TD3 Specific Hyperparameters
-        self.exploration_noise = config.get('exploration_noise', 0.1)
-        self.target_noise = config.get('target_noise', 0.2)
-        self.noise_clip = config.get('noise_clip', 0.5)
-        self.policy_delay = config.get('policy_delay', 2)
+        self.exploration_noise = config('exploration_noise', 0.1)
+        self.target_noise = config('target_noise', 0.2)
+        self.noise_clip = config('noise_clip', 0.5)
+        self.policy_delay = config('policy_delay', 2)
 
         self.total_it = 0 # Step counter for delayed updates
 
