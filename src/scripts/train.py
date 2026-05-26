@@ -7,6 +7,7 @@ from src.envs.base_env import env_from_config
 from src.utils.replay_buffer import ReplayBuffer
 from src.algorithms.sac.sac_agent import SACAgent
 from src.algorithms.sac.attitude_agent import AttitudeAgent
+from src.algorithms.td3.td3_agent import TD3Agent  # <-- Added TD3 Import
 from src.configs.config import Config
 from src.utils.logging import LoggingStruct
 
@@ -18,9 +19,6 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_
 
     start_time = round(time.time())
 
-    evaluate_env_config = Config('evaluate_env')
-    evaluate_env_config.load_from_file('src/envs/evaluate_env_config.json')
-
     # Init environment
     env = env_from_config(env_config, device=device)
     obs_dim = env.obs_dim
@@ -30,6 +28,9 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_
     algorithm = agent_config('name')
     if algorithm == "sac_agent":
         agent = SACAgent(obs_dim, action_dim, env_config('num_envs'), device, agent_config)
+    elif algorithm == "td3_agent":  # <-- Added TD3 Initialization
+        obs_dim = 14
+        agent = TD3Agent(obs_dim, action_dim, env_config('num_envs'), device, agent_config)
     elif algorithm == "attitude_agent":
         obs_dim = 14
         agent = AttitudeAgent(obs_dim, action_dim, env_config('num_envs'), device, agent_config)
@@ -62,9 +63,22 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_
     obs_mean = torch.zeros(obs_dim, device=device)
     obs_var = torch.ones(obs_dim, device=device)
 
+    # Define warmup steps for TD3 (defaulting to 10k as per the paper)
+    warmup_steps = env_config.get('warmup_steps', 10000)
+
     for epoch in range(env_config('epochs')):
         with torch.no_grad():
-            action = agent.act(obs)
+            # <-- Action Selection Logic Updated for TD3 -->
+            if algorithm == "td3_agent":
+                # Pure exploration for early epochs
+                if epoch < warmup_steps and load_model is None:
+                    # Generate uniformly random actions in [-1, 1]
+                    action = torch.rand((env.num_envs, action_dim), device=device) * 2.0 - 1.0
+                else:
+                    # Deterministic action + Gaussian noise
+                    action = agent.act(obs, add_noise=True)
+            else:
+                action = agent.act(obs)
 
         # Update mean and std of observations for logging
         obs_mean = 0.99 * obs_mean + 0.01 * obs.mean(dim=0)

@@ -1,0 +1,16 @@
+{
+  "name": "td3_agent",
+  "gamma": 0.99,
+  "tau": 0.005,
+  "batch_size": 100,
+  "actor_hidden_dim": 256,
+  "critic_hidden_dim": 256,
+  "actor_learning_rate": 0.001,
+  "critic_learning_rate": 0.001,
+  "actor_weight_decay": 0.0,
+  "critic_weight_decay": 0.0,
+  "exploration_noise": 0.1,
+  "target_noise": 0.2,
+  "noise_clip": 0.5,
+  "policy_delay": 2
+}
