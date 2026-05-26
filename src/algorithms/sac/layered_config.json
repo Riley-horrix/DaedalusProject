@@ -1,0 +1,16 @@
+{
+  "name": "layered_sac_agent",
+  "gamma": 0.99,
+  "tau": 0.005,
+  "batch_size": 256,
+  "actor_hidden_dim": 256,
+  "critic_hidden_dim": 256,
+  "actor_learning_rate": 0.0003,
+  "critic_learning_rate": 0.0003,
+  "actor_weight_decay": 0.0,
+  "critic_weight_decay": 0.0,
+  "init_alpha": 0.2,
+  "alpha_learning_rate": 0.0003,
+  "alpha_weight_decay": 0.0,
+  "inner_model_path": "../models/sac-control/v2/data_attitude_agent_olive-violet-51_recent.pt"
+}

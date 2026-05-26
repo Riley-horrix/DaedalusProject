@@ -1,47 +1,82 @@
+import torch
+import math
+
 from src.algorithms.sac.sac_agent import SACAgent
+from src.algorithms.sac.attitude_agent import AttitudeAgent
 
 class LayeredSACAgent(SACAgent):
-    """This agent splits the control into layers, into attitude control and position / waypoint control. The SAC agent is used for both layers, but they are trained separately. The position / waypoint control layer outputs desired attitude and altitude, which are then tracked by the attitude control layer.
-
-    Args:
-        SACAgent (_type_): _description_
+    """
+    This agent splits the control into layers.
+    The outer loop (SAC) generates desired targets (pitch, roll, beta, velocity).
+    The inner loop (AttitudeAgent) maps these targets and current states into physical control surface commands.
     """
     def __init__(self, obs_dim, action_dim, num_envs, device, config, attitude_config):
-        super().__init__(obs_dim, 3, num_envs, device, config)
+        super().__init__(obs_dim, 4, num_envs, device, config)
+        self.attitude_agent = AttitudeAgent(14, 4, num_envs, device, attitude_config)
+        self.last_outer_action = None
 
-        self.attitude_agent = SACAgent(obs_dim, action_dim, num_envs, device, attitude_config)
+    def _wrap_pi(self, angles):
+        return (angles + torch.pi) % (2 * torch.pi) - torch.pi
 
     def act(self, obs):
-        """observation(dim 22):
-            0. ego_delta_npos      (unit: km)
-            1. ego_delta_epos       (unit km)
-            2. ego_delta_altitude            (unit: km)
-            3. ego_altitude            (unit: 5km)
-            4. ego_roll_sin
-            5. ego_roll_cos
-            6. ego_pitch_sin
-            7. ego_pitch_cos
-            8. ego_vt                  (unit: mh)
-            9. ego_alpha_sin
-            10. ego_alpha_cos
-            11. ego_beta_sin
-            12. ego_beta_cos
-            13. ego_P                  (unit: rad/s)
-            14. ego_Q                  (unit: rad/s)
-            15. ego_R                  (unit: rad/s)
-            16. ego_T                  (unit: %)
-            17. ego_el                 (unit: %)
-            18. ego_ail                (unit: %)
-            19. ego_rud                (unit: %)
-            20. ego_lef                (unit: %)
-            21. EAS2TAS
-        """
-        # First get the desired attitude and altitude from the position control agent
-        obs_clone = obs.clone()
-        att_alt = super().act(obs_clone)
+        outer_action = super().act(obs)
+        self.last_outer_action = outer_action.clone()
 
-        # Sub in the action for the attitude actor observation
-        obs_clone[0:3] = att_alt
-        action = self.attitude_agent.act(obs_clone)
+        target_pitch = outer_action[:, 0] * (torch.pi / 2)
+        target_roll = outer_action[:, 1] * torch.pi
+        target_beta = outer_action[:, 2] * 0.5
+        target_vt = (outer_action[:, 3] + 1.0) * 350.0 + 300.0
 
+        roll = torch.atan2(obs[:, 4], obs[:, 5])
+        pitch = torch.atan2(obs[:, 6], obs[:, 7])
+        beta = torch.atan2(obs[:, 11], obs[:, 12])
+
+        vt_fts = obs[:, 8] * 340.0 / 0.3048
+
+        e_beta = self._wrap_pi(target_beta - beta)
+        e_pitch = self._wrap_pi(target_pitch - pitch)
+        e_roll = self._wrap_pi(target_roll - roll)
+        delta_vt_fts = vt_fts - target_vt
+
+        c_beta = (6.0 / torch.pi) * 4.0
+        c_pitch = (6.0 / torch.pi) * 1.0
+        c_roll = (6.0 / torch.pi) * 1.0
+
+        weighted_e_beta = e_beta * c_beta
+        weighted_e_pitch = e_pitch * c_pitch
+        weighted_e_roll = e_roll * c_roll
+
+        norm_el = obs[:, 17]
+        norm_ail = obs[:, 18]
+        norm_rud = obs[:, 19]
+        norm_P = obs[:, 13]
+        norm_Q = obs[:, 14]
+        norm_R = obs[:, 15]
+        norm_vt = obs[:, 8]
+        alpha_sin = obs[:, 9]
+        alpha_cos = obs[:, 10]
+        eas2tas = obs[:, 21]
+
+        inner_obs = torch.stack([
+            weighted_e_beta,
+            weighted_e_pitch,
+            weighted_e_roll,
+            norm_el,
+            norm_ail,
+            norm_rud,
+            norm_P,
+            norm_Q,
+            norm_R,
+            norm_vt,
+            alpha_sin,
+            alpha_cos,
+            eas2tas,
+            delta_vt_fts
+        ], dim=-1)
+
+        action = self.attitude_agent.act(inner_obs)
         return action
+
+    def load_inner_agent(self, path: str):
+        """Helper function to load pre-trained weights specifically for the inner loop."""
+        self.attitude_agent.load(path)

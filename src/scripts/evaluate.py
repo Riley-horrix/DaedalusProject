@@ -1,3 +1,4 @@
+# evaluate.py
 import os
 import math
 import torch
@@ -7,6 +8,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from src.algorithms.sac.sac_agent import SACAgent
+from src.algorithms.sac.attitude_agent import AttitudeAgent
+from src.algorithms.td3.td3_agent import TD3Agent
 from src.configs.config import Config
 from src.envs.base_env import env_from_config
 from src.utils.math import enu_to_geodetic
@@ -82,13 +85,19 @@ def run_evaluate(env_config: Config, agent_config: Config, models: list[str], pa
     # Init all models
     algorithm = agent_config('name')
     if algorithm == "sac_agent":
-        agents = [SACAgent(obs_dim, action_dim, 1, device, agent_config) for _ in range(len(models))]
-
-        # Load .pt files into agents
-        for i in range(len(models)):
-            agents[i].load(models[i])
+        agents = [SACAgent(obs_dim, action_dim, 10, device, agent_config) for _ in range(len(models))]
+    elif algorithm == "td3_agent":
+        obs_dim = 14
+        agents = [TD3Agent(obs_dim, action_dim, 10, device, agent_config) for _ in range(len(models))]
+    elif algorithm == "attitude_agent":
+        obs_dim = 14
+        agents = [AttitudeAgent(obs_dim, action_dim, 10, device, agent_config) for _ in range(len(models))]
     else:
         raise ValueError(f"Unsupported algorithm: {algorithm}")
+
+    # Load .pt files into agents
+    for i in range(len(models)):
+        agents[i].load(models[i])
 
     reward_history = []
     action_history = []
@@ -108,12 +117,22 @@ def run_evaluate(env_config: Config, agent_config: Config, models: list[str], pa
         model_name = models[model_idx].split("/")[-1]
         for epoch in range(env_config('epochs')):
             with torch.no_grad():
-                action = agent.act(obs)
+                # Differentiate inference between TD3 (deterministic flag) and stochastic agents
+                if algorithm == "td3_agent":
+                    action = agent.act(obs, add_noise=False)
+                else:
+                    action = agent.act(obs)
 
             next_obs, reward, done, bad_done, timeout, info = env.step(action)
 
+            # Reset PID states for AttitudeAgent if the episode terminates
+            if algorithm == "attitude_agent":
+                valid_mask = ~(torch.isnan(next_obs).any(dim=-1) | torch.isinf(next_obs).any(dim=-1))
+                real_done = done | bad_done | ~valid_mask
+                agent.reset_pid_states(real_done)
+
             reward_history.append(reward_history[-1] + reward.squeeze().detach().cpu().numpy() if len(reward_history) > 0 else 0 + reward.squeeze().detach().cpu().numpy())
-            action_history.append(action[1,:].squeeze().detach().cpu().numpy())
+            action_history.append(action[1,:].squeeze().detach().cpu().numpy() if action.shape[0] > 1 else action[0,:].squeeze().detach().cpu().numpy())
 
             mask |= done | bad_done | timeout
 
@@ -132,7 +151,7 @@ def run_evaluate(env_config: Config, agent_config: Config, models: list[str], pa
                 t_epos = None
                 t_alt = None
                 t_pitch = env.env.task.target_pitch
-                t_heading = env.env.task.target_heading
+                t_heading = getattr(env.env.task, 'target_heading', None)
 
             # Export telemetry to Tacview ACMI format
             export_batch_acmi(
@@ -163,12 +182,14 @@ def run_evaluate(env_config: Config, agent_config: Config, models: list[str], pa
             if epoch % 100 == 0:
                 print(f"Epoch {epoch} / {env_config('epochs')}")
 
-
-
         print("Generating reward plot...")
         reward_matrix = np.array(reward_history)
 
         plt.figure(figsize=(12, 6))
+
+        # Check if reward_matrix is 1D or 2D. If 1D (single agent), reshape it.
+        if len(reward_matrix.shape) == 1:
+            reward_matrix = reward_matrix[:, np.newaxis]
 
         num_agents_to_plot = reward_matrix.shape[1]
         colors = plt.cm.jet(np.linspace(0, 1, num_agents_to_plot))
@@ -194,7 +215,7 @@ def run_evaluate(env_config: Config, agent_config: Config, models: list[str], pa
         action_dimensions = ["Thrust", "Elevator", "Aileron", "Rudder"]
         action_matrix = np.array(action_history)
         plt.subplots(2, 2, figsize=(12, 8))
-        for i in range(action_matrix.shape[1]):
+        for i in range(min(action_matrix.shape[1], 4)): # Safeguard if action_dim < 4
             plt.subplot(2, 2, i+1)
             plt.plot(action_matrix[:, i], alpha=0.4, label=f"Action {action_dimensions[i]}")
             plt.title(f"Action Dimension {i+1} Over Time\nModel: {model_name}")
@@ -204,7 +225,7 @@ def run_evaluate(env_config: Config, agent_config: Config, models: list[str], pa
             plt.grid(True, alpha=0.4)
         # Now also plot a time smoothed curve of the data
         plotted_steps = np.arange(action_matrix.shape[0])
-        for i in range(action_matrix.shape[1]):
+        for i in range(min(action_matrix.shape[1], 4)):
             smoothed = np.convolve(action_matrix[:, i], np.ones(100)/100, mode='valid')
             plt.subplot(2, 2, i+1)
             plt.plot(plotted_steps[:len(smoothed)], smoothed, color='red', label=f"Smoothed Action {action_dimensions[i]}")
@@ -217,10 +238,10 @@ def run_evaluate(env_config: Config, agent_config: Config, models: list[str], pa
 
 if __name__ == "__main__":
     env_config = Config('evaluate_env')
-    agent_config = Config('sac_agent')
+    agent_config = Config('attitude_agent')
 
     env_config.load_from_file('src/envs/evaluate_env_config.json')
-    agent_config.load_from_file('src/algorithms/sac/sac_config.json')
+    agent_config.load_from_file('src/algorithms/sac/attitude_config.json')
 
     print(f"Evaluating models, {sys.argv[2:]}")
 
