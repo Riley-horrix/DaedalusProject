@@ -6,7 +6,7 @@ from src.scripts.train_layered import train_layered
 
 if __name__ == "__main__":
     env_config = Config('layered_env')
-    env_config.load_from_file('src/env/layered_env_config.json')
+    env_config.load_from_file('src/envs/layered_env_config.json')
 
     agent_config = Config('layered_sac')
     agent_config.load_from_file('src/algorithms/sac/layered_config.json')
