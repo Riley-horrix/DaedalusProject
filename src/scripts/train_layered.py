@@ -120,8 +120,7 @@ def train_layered(env_config: Config, agent_config: Config, attitude_config: Con
             path = f"{data_path}{agent_config('name')}_{run_name}_recent.pt"
 
             agent.save(path)
-            wandb.save(path)
-
             if run is not None:
                 run.save(path)
+                wandb.save(path)
             print("Model Saved.")
