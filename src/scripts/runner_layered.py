@@ -8,10 +8,10 @@ if __name__ == "__main__":
     env_config = Config('layered_env')
     env_config.load_from_file('src/envs/layered_env_config.json')
 
-    agent_config = Config('layered_sac')
+    agent_config = Config('layered_sac_agent')
     agent_config.load_from_file('src/algorithms/sac/layered_config.json')
 
-    attitude_config = Config('attitude')
+    attitude_config = Config('attitude_agent')
     attitude_config.load_from_file('src/algorithms/sac/attitude_config.json')
 
     # Parse command line arguments for logging to wandb
