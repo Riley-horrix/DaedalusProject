@@ -1,7 +1,7 @@
 import wandb
 import argparse
 from src.configs.config import Config
-from train_layered import train_layered
+from src.scripts.train_layered import train_layered
 
 
 if __name__ == "__main__":
