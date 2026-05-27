@@ -1,8 +1,8 @@
 import torch
-import math
 
 from src.algorithms.sac.sac_agent import SACAgent
 from src.algorithms.sac.attitude_agent import AttitudeAgent
+from src.algorithms.td3.td3_agent import TD3Agent
 
 class LayeredSACAgent(SACAgent):
     """
@@ -11,8 +11,14 @@ class LayeredSACAgent(SACAgent):
     The inner loop (AttitudeAgent) maps these targets and current states into physical control surface commands.
     """
     def __init__(self, obs_dim, action_dim, num_envs, device, config, attitude_config):
-        super().__init__(obs_dim, 4, num_envs, device, config)
-        self.attitude_agent = AttitudeAgent(14, 4, num_envs, device, attitude_config)
+        super().__init__(obs_dim, action_dim, num_envs, device, config)
+        if attitude_config("name") == "attitude_agent":
+            self.attitude_agent = AttitudeAgent(14, 4, num_envs, device, attitude_config)
+        elif attitude_config("name") == "td3_agent":
+            self.attitude_agent = TD3Agent(14, 4, num_envs, device, attitude_config)
+        else:
+            raise ValueError(f"Unsupported inner agent algorithm: {attitude_config('name')}")
+
         self.last_outer_action = None
 
     def _wrap_pi(self, angles):

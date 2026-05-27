@@ -19,9 +19,6 @@ def train_layered(env_config: Config, agent_config: Config, attitude_config: Con
     env = env_from_config(env_config, device=device)
     obs_dim = env.obs_dim
 
-    # Note: The environment expects 4 control surfaces (el, ail, rud, thrust).
-    # Coincidentally, our outer SAC agent also outputs 4 targets (pitch, roll, beta, velocity).
-    # We will use the outer agent's action dimension for the Replay Buffer.
     outer_action_dim = 4
 
     # Init Layered Agent

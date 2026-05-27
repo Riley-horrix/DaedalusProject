@@ -12,5 +12,5 @@
   "init_alpha": 0.2,
   "alpha_learning_rate": 0.0003,
   "alpha_weight_decay": 0.0,
-  "inner_model_path": "../models/sac-control/v2/data_attitude_agent_olive-violet-51_recent.pt"
+  "inner_model_path": "./data/twilight.pt"
 }
