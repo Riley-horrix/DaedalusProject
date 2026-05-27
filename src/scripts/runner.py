@@ -6,7 +6,7 @@ from src.configs.config import Config
 
 if __name__ == "__main__":
     env_config = Config('env')
-    agent_config = Config('td3_agent')
+    agent_config = Config('attitude_agent')
 
     env_config.load_from_file('src/envs/env_config.json')
     agent_config.load_from_file('src/algorithms/td3/td3_config.json')
