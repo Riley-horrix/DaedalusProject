@@ -11,10 +11,8 @@ if __name__ == "__main__":
     agent_config = Config('layered_sac_agent')
     agent_config.load_from_file('src/algorithms/sac/layered_config.json')
 
-    # attitude_config = Config('attitude_agent')
+    attitude_config = Config('attitude_agent')
     # attitude_config.load_from_file('src/algorithms/sac/attitude_config.json')
-
-    attitude_config = Config('td3_agent')
     attitude_config.load_from_file('src/algorithms/td3/td3_config.json')
 
     # Parse command line arguments for logging to wandb
