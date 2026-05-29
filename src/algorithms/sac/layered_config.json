@@ -12,5 +12,5 @@
   "init_alpha": 0.2,
   "alpha_learning_rate": 0.0003,
   "alpha_weight_decay": 0.0,
-  "inner_model_path": "./data/twilight.pt"
+  "inner_model_path" : "../models/td3_agent_twilight-galaxy-54_recent.pt"
 }

@@ -1,5 +1,5 @@
 {
-  "name": "attitude_agent",
+  "name": "td3_agent",
   "gamma": 0.99,
   "tau": 0.005,
   "batch_size": 100,
