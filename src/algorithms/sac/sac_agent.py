@@ -15,15 +15,15 @@ class DoubleQCritic(nn.Module):
         self.q1 = nn.Sequential(
             nn.Linear(obs_dim + action_dim, hidden_dim),
             nn.SiLU(),
-            # nn.Linear(hidden_dim, hidden_dim),
-            # nn.SiLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.SiLU(),
             nn.Linear(hidden_dim, 1)
         )
         self.q2 = nn.Sequential(
             nn.Linear(obs_dim + action_dim, hidden_dim),
             nn.SiLU(),
-            # nn.Linear(hidden_dim, hidden_dim),
-            # nn.SiLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.SiLU(),
             nn.Linear(hidden_dim, 1)
         )
 
@@ -48,8 +48,8 @@ class GaussianActor(nn.Module):
         self.x1 = nn.Sequential(
             nn.Linear(obs_dim, hidden_dim),
             nn.SiLU(),
-            # nn.Linear(hidden_dim, hidden_dim),
-            # nn.SiLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.SiLU(),
         )
 
         self.mean_layer = nn.Linear(hidden_dim, action_dim)
