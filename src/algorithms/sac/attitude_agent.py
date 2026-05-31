@@ -3,7 +3,7 @@ import torch
 from src.algorithms.sac.sac_agent import SACAgent
 from src.algorithms.td3.td3_agent import TD3Agent
 
-class AttitudeAgent(TD3Agent):
+class AttitudeAgent(SACAgent):
     """
     TD3Agent for attitude control task. The observation is the 13-dimensional format of the inner-loop agent.
     The action is the 4-dimensional control surface deflection, with thrust coming from a PID.
