@@ -5,8 +5,8 @@ import wandb
 
 from src.envs.base_env import env_from_config
 from src.utils.replay_buffer import ReplayBuffer
-# from src.algorithms.sac.sac_agent import SACAgent
-from src.algorithms.sac.sac_bad import SACAgent
+from src.algorithms.sac.sac_agent import SACAgent
+# from src.algorithms.sac.sac_bad import SACAgent
 from src.algorithms.sac.attitude_agent import AttitudeAgent
 from src.algorithms.td3.td3_agent import TD3Agent  # <-- Added TD3 Import
 from src.configs.config import Config
