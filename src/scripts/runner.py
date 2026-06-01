@@ -9,7 +9,7 @@ if __name__ == "__main__":
     agent_config = Config('sac_agent')
 
     env_config.load_from_file('src/envs/env_config.json')
-    agent_config.load_from_file('src/algorithms/sac/sac_bad_config.json')
+    agent_config.load_from_file('src/algorithms/sac/sac_config.json')
 
     # Parse command line arguments for logging to wandb
     parser = argparse.ArgumentParser(description="Train a reinforcement learning agent.")
