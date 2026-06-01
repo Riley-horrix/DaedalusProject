@@ -101,7 +101,7 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_
         real_done = done | bad_done | ~valid_mask
 
         episodic_reward = (reward_saved * real_done.float()).sum().item() / real_done.float().sum().item() if real_done.float().sum().item() > 0 else 0.0
-        reward_saved = reward_saved * ~real_done.float()
+        reward_saved = reward_saved * (~real_done).float()
 
         if algorithm == "attitude_agent":
             agent.reset_pid_states(real_done)
