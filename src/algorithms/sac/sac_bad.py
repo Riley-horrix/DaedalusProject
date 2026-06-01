@@ -208,10 +208,13 @@ class SACAgent:
             eta_loss_acc += eta_loss.item()
 
         # Update logging struct
-        log.log['loss/actor'] = actor_loss_acc / num_updates
-        log.log['loss/critic'] = critic_loss_acc / num_updates
-        log.log['loss/eta'] = eta_loss_acc / num_updates
-        log.log['train/eta'] = self.log_eta.exp().item()
+        new_log = {
+            "loss/actor": actor_loss_acc / num_updates,
+            "loss/critic": critic_loss_acc / num_updates,
+            "loss/eta": eta_loss_acc / num_updates,
+            "train/eta": self.log_eta.exp().item()
+        }
+        log.update(new_log)
 
     def save(self, path):
         torch.save({
