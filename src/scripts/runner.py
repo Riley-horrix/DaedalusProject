@@ -6,10 +6,10 @@ from src.configs.config import Config
 
 if __name__ == "__main__":
     env_config = Config('env')
-    agent_config = Config('attitude_agent')
+    agent_config = Config('sac_agent')
 
     env_config.load_from_file('src/envs/env_config.json')
-    agent_config.load_from_file('src/algorithms/td3/td3_config.json')
+    agent_config.load_from_file('src/algorithms/sac/sac_bad_config.json')
 
     # Parse command line arguments for logging to wandb
     parser = argparse.ArgumentParser(description="Train a reinforcement learning agent.")
