@@ -28,7 +28,7 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_
     # Init agent
     algorithm = agent_config('name')
     if algorithm == "sac_agent":
-        obs_dim = 10
+        obs_dim = 11
         agent = SACAgent(obs_dim, action_dim, env_config('num_envs'), device, agent_config)
     elif algorithm == "td3_agent":  # <-- Added TD3 Initialization
         obs_dim = 14
