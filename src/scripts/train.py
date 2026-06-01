@@ -55,9 +55,9 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_
     obs = env.reset()
 
     reward_saved = torch.zeros(env.num_envs, dtype=torch.float32, device=device)
-    done = 0
-    bad_done = 0
-    timeout = 0
+    done_stat = 0
+    bad_done_stat = 0
+    timeout_stat = 0
 
     before_epoch_time = time.time()
 
@@ -90,11 +90,11 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_
 
         # Track done/bad_done/timeout for logging
         reward_saved += reward
-        done += done.sum().item()
-        bad_done += bad_done.sum().item()
-        timeout += timeout.sum().item()
+        done_stat += done.sum().item()
+        bad_done_stat += bad_done.sum().item()
+        timeout_stat += timeout.sum().item()
 
-        total = done + bad_done + timeout
+        total = done_stat + bad_done_stat + timeout_stat
 
         # Crash Filtering
         valid_mask = ~(torch.isnan(next_obs).any(dim=-1) | torch.isinf(next_obs).any(dim=-1))
@@ -129,9 +129,9 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_
                 log_dict = {
                     "time/average_epoch_time": epoch_time,
                     "env/episodic_reward": episodic_reward,
-                    "env/done": done / total if total > 0 else 0.0,
-                    "env/bad_done": bad_done / total if total > 0 else 0.0,
-                    "env/timeout": timeout / total if total > 0 else 0.0,
+                    "env/done": done_stat / total if total > 0 else 0.0,
+                    "env/bad_done": bad_done_stat / total if total > 0 else 0.0,
+                    "env/timeout": timeout_stat / total if total > 0 else 0.0,
                     "velocity/total_error": obs[:, -1].abs().sum().item(),
                     "velocity/first_error": torch.abs(obs[0, -1]).item(),
                 }
@@ -139,12 +139,12 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_
                 log_dict.update(mean_var_dict)
                 run.log(log_dict, step=epoch)
             else:
-                print(f"Epoch {epoch}, Reward: {episodic_reward:.2f}, Done: {done / total if total > 0 else 0.0}, Bad Done: {bad_done / total if total > 0 else 0.0}, Timeout: {timeout / total if total > 0 else 0.0}, Epoch Time: {epoch_time:.4f}s")
+                print(f"Epoch {epoch}, Reward: {episodic_reward:.2f}, Done: {done_stat / total if total > 0 else 0.0}, Bad Done: {bad_done_stat / total if total > 0 else 0.0}, Timeout: {timeout_stat / total if total > 0 else 0.0}, Epoch Time: {epoch_time:.4f}s")
 
             # Reset done/bad_done/timeout trackers
-            done = 0
-            bad_done = 0
-            timeout = 0
+            done_stat = 0
+            bad_done_stat = 0
+            timeout_stat = 0
 
         # Save the model after every 10k steps
         if epoch % 10000 == 0:
