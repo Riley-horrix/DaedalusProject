@@ -152,11 +152,7 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_
             run_name = wandb.run.name if wandb.run is not None else f"{start_time}"
             path = f"{data_path}{agent_config('name')}_{run_name}_recent.pt"
             agent.save(path)
-            wandb.save(path)
-            # Get run name from wandb
             if run is not None:
                 run.save(path)
+                wandb.save(path)
             print("Model Saved.")
-
-            # Also run an evaluation step here and save evaluation results
-            # run_evaluate(evaluate_env_config, agent_config, [path], data_path)
