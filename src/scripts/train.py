@@ -115,39 +115,37 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_
         if epoch > 10:
             agent.update(buffer, num_envs, log)
 
-        # Log metrics every 100 steps
-        if (epoch + 1) % 100 == 0:
-            # Calculate epoch time
-            now_epoch_time = time.time()
-            epoch_time = (now_epoch_time - before_epoch_time) / 100
-            before_epoch_time = now_epoch_time
+        # Calculate epoch time
+        now_epoch_time = time.time()
+        epoch_time = (now_epoch_time - before_epoch_time) / 100
+        before_epoch_time = now_epoch_time
 
-            mean_var_dict = {f"obs_mean/{i}": obs_mean[i].item() for i in range(obs_dim)}
-            mean_var_dict.update({f"obs_var/{i}": obs_var[i].item() for i in range(obs_dim)})
+        mean_var_dict = {f"obs_mean/{i}": obs_mean[i].item() for i in range(obs_dim)}
+        mean_var_dict.update({f"obs_var/{i}": obs_var[i].item() for i in range(obs_dim)})
 
-            if run is not None:
-                log_dict = {
-                    "time/average_epoch_time": epoch_time,
-                    "env/episodic_reward": episodic_reward,
-                    "env/done": done_stat / total if total > 0 else 0.0,
-                    "env/bad_done": bad_done_stat / total if total > 0 else 0.0,
-                    "env/timeout": timeout_stat / total if total > 0 else 0.0,
-                    "velocity/total_error": obs[:, -1].abs().sum().item(),
-                    "velocity/first_error": torch.abs(obs[0, -1]).item(),
-                }
-                log_dict.update(log.log)
-                log_dict.update(mean_var_dict)
-                run.log(log_dict, step=epoch)
-            else:
-                print(f"Epoch {epoch}, Reward: {episodic_reward:.2f}, Done: {done_stat / total if total > 0 else 0.0}, Bad Done: {bad_done_stat / total if total > 0 else 0.0}, Timeout: {timeout_stat / total if total > 0 else 0.0}, Epoch Time: {epoch_time:.4f}s")
+        if run is not None:
+            log_dict = {
+                "time/average_epoch_time": epoch_time,
+                "env/episodic_reward": episodic_reward,
+                "env/done": done_stat / total if total > 0 else 0.0,
+                "env/bad_done": bad_done_stat / total if total > 0 else 0.0,
+                "env/timeout": timeout_stat / total if total > 0 else 0.0,
+                "velocity/total_error": obs[:, -1].abs().sum().item(),
+                "velocity/first_error": torch.abs(obs[0, -1]).item(),
+            }
+            log_dict.update(log.log)
+            log_dict.update(mean_var_dict)
+            run.log(log_dict, step=epoch)
+        else:
+            print(f"Epoch {epoch}, Reward: {episodic_reward:.2f}, Done: {done_stat / total if total > 0 else 0.0}, Bad Done: {bad_done_stat / total if total > 0 else 0.0}, Timeout: {timeout_stat / total if total > 0 else 0.0}, Epoch Time: {epoch_time:.4f}s")
 
-            # Reset done/bad_done/timeout trackers
-            done_stat = 0
-            bad_done_stat = 0
-            timeout_stat = 0
+        # Reset done/bad_done/timeout trackers
+        done_stat = 0
+        bad_done_stat = 0
+        timeout_stat = 0
 
-        # Save the model after every 10k steps
-        if epoch % 10000 == 0:
+        # Save the model after every 50 steps
+        if epoch % 50 == 0:
             print("Saving model...")
             run_name = wandb.run.name if wandb.run is not None else f"{start_time}"
             path = f"{data_path}{agent_config('name')}_{run_name}_recent.pt"
