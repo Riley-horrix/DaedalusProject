@@ -72,9 +72,9 @@ class GaussianActor(nn.Module):
             if module == self.mean_layer:
                 nn.init.orthogonal_(module.weight, gain=0.01)
                 nn.init.constant_(module.bias, 0.0)
-            else:
-                nn.init.orthogonal_(module.weight, gain=np.sqrt(2))
-                nn.init.constant_(module.bias, 0.0)
+            elif module == self.log_std_layer:
+                nn.init.orthogonal_(module.weight, gain=0.01)
+                nn.init.constant_(module.bias, -0.5)
 
     def forward(self, obs):
         """Forward pass through the actor network.
@@ -109,7 +109,7 @@ class GaussianActor(nn.Module):
 
         # Enforcing action bounds (see appendix C of SAC paper for details)
         log_prob -= (2.0 * (np.log(2.0) - x_t - F.softplus(-2.0 * x_t)))
-        log_prob = log_prob.sum(1, keepdim=True)
+        log_prob = log_prob.sum(dim=-1, keepdim=True)
 
         return action, log_prob, torch.tanh(mean)
 
@@ -149,7 +149,7 @@ class SACAgent(BaseAgent):
         self.alpha_optim = torch.optim.Adam(
             [self.log_alpha],
             lr=config('alpha_learning_rate'),
-            weight_decay=config('alpha_weight_decay')
+            weight_decay=0.0
         )
 
     def act(self, obs: torch.Tensor) -> torch.Tensor:

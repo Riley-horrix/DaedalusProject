@@ -6,9 +6,8 @@ import wandb
 from src.envs.base_env import env_from_config
 from src.utils.replay_buffer import ReplayBuffer
 from src.algorithms.sac.sac_agent import SACAgent
-# from src.algorithms.sac.sac_bad import SACAgent
 from src.algorithms.sac.attitude_agent import AttitudeAgent
-from src.algorithms.td3.td3_agent import TD3Agent  # <-- Added TD3 Import
+from src.algorithms.td3.td3_agent import TD3Agent
 from src.configs.config import Config
 from src.utils.logging import LoggingStruct
 
@@ -25,22 +24,24 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_
     obs_dim = env.obs_dim
     action_dim = env.action_dim
 
+    num_envs = env_config('num_envs')
+
     # Init agent
     algorithm = agent_config('name')
     if algorithm == "sac_agent":
         obs_dim = 11
-        agent = SACAgent(obs_dim, action_dim, env_config('num_envs'), device, agent_config)
+        agent = SACAgent(obs_dim, action_dim, num_envs, device, agent_config)
     elif algorithm == "td3_agent":  # <-- Added TD3 Initialization
         obs_dim = 14
-        agent = TD3Agent(obs_dim, action_dim, env_config('num_envs'), device, agent_config)
+        agent = TD3Agent(obs_dim, action_dim, num_envs, device, agent_config)
     elif algorithm == "attitude_agent":
         obs_dim = 14
-        agent = AttitudeAgent(obs_dim, action_dim, env_config('num_envs'), device, agent_config)
+        agent = AttitudeAgent(obs_dim, action_dim, num_envs, device, agent_config)
     else:
         raise ValueError(f"Unsupported algorithm: {algorithm}")
 
     # Init buffer
-    buffer = ReplayBuffer(obs_dim, action_dim, env_config('buffer_capacity'), env_config('num_envs'), device)
+    buffer = ReplayBuffer(obs_dim, action_dim, env_config('buffer_capacity'), num_envs, device)
 
     # Init logging
     log = LoggingStruct()
@@ -109,11 +110,10 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_
         # Store transition (Only store valid ones, or zero out broken ones)
         buffer.push(obs, action, reward, next_obs, real_done)
 
-        obs = next_obs
+        obs = torch.where(valid_mask.unsqueeze(-1), next_obs, torch.zeros_like(next_obs))
 
-        # Allow agent to train every 10 steps
-        if epoch > 1000 and epoch % 10 == 0:
-            agent.update(buffer, 10, log)
+        if epoch > 10:
+            agent.update(buffer, num_envs, log)
 
         # Log metrics every 100 steps
         if (epoch + 1) % 100 == 0:
