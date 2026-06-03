@@ -113,11 +113,11 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_
         obs = torch.where(valid_mask.unsqueeze(-1), next_obs, torch.zeros_like(next_obs))
 
         if epoch > 10:
-            agent.update(buffer, num_envs, log)
+            agent.update(buffer, num_envs // 4, log)
 
         # Calculate epoch time
         now_epoch_time = time.time()
-        epoch_time = (now_epoch_time - before_epoch_time) / 100
+        epoch_time = (now_epoch_time - before_epoch_time)
         before_epoch_time = now_epoch_time
 
         mean_var_dict = {f"obs_mean/{i}": obs_mean[i].item() for i in range(obs_dim)}
