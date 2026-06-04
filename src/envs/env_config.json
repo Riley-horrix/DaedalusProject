@@ -2,7 +2,7 @@
     "name": "env",
     "env_name": "neural_plane",
     "env_type": "attitude",
-    "num_envs": 1024,
+    "num_envs": 256,
     "buffer_capacity": 65536,
     "epochs": 1000000,
     "min_init_altitude": 3000.0,
