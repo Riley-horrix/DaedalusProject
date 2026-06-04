@@ -14,10 +14,14 @@ class DoubleQCritic(nn.Module):
         self.q1 = nn.Sequential(
             nn.Linear(obs_dim + action_dim, hidden_dim),
             nn.SiLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.SiLU(),
             nn.Linear(hidden_dim, 1)
         )
         self.q2 = nn.Sequential(
             nn.Linear(obs_dim + action_dim, hidden_dim),
+            nn.SiLU(),
+            nn.Linear(hidden_dim, hidden_dim),
             nn.SiLU(),
             nn.Linear(hidden_dim, 1)
         )
@@ -35,6 +39,8 @@ class DeterministicActor(nn.Module):
         self.net = nn.Sequential(
             nn.Linear(obs_dim, hidden_dim),
             nn.SiLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.SiLU(),
             nn.Linear(hidden_dim, action_dim),
             nn.Tanh() # Squash output to [-1, 1] for control surfaces
         )
@@ -44,7 +50,7 @@ class DeterministicActor(nn.Module):
     def _orthogonal_init(self, module):
         if isinstance(module, nn.Linear):
             # For the final layer, initialize weights with a smaller gain to keep initial actions near zero
-            if module == self.net[2]:
+            if module == self.net[-2]:
                 nn.init.orthogonal_(module.weight, gain=0.01)
                 nn.init.constant_(module.bias, 0.0)
             else:
@@ -168,11 +174,15 @@ class TD3Agent(BaseAgent):
 
             # Log metrics on the final epoch cycle
             if epoch == epochs - 1:
-                log.update({
+                log_dict = {
                     "loss/critic_1": critic_1_loss.item(),
                     "loss/critic_2": critic_2_loss.item(),
-                    "loss/actor": actor_loss.item(),
-                })
+                }
+                # Only log actor loss if it isn't the dummy zero tensor
+                if actor_loss.item() != 0.0:
+                    log_dict["loss/actor"] = actor_loss.item()
+
+                log.update(log_dict)
 
     def save(self, path: str):
         data = {
