@@ -1,5 +1,7 @@
+from collections import deque
 # train.py
 import torch
+import numpy as np
 import time
 import wandb
 
@@ -55,10 +57,11 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_
 
     obs = env.reset()
 
-    reward_saved = torch.zeros(env.num_envs, dtype=torch.float32, device=device)
-    done_stat = 0
-    bad_done_stat = 0
-    timeout_stat = 0
+    current_episode_rewards = torch.zeros(env.num_envs, dtype=torch.float32, device=device)
+    recent_scores = deque(maxlen=100)
+    recent_successes = deque(maxlen=100)
+    recent_crashes = deque(maxlen=100)
+    recent_timeouts = deque(maxlen=100)
 
     before_epoch_time = time.time()
 
@@ -89,27 +92,34 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_
 
         next_obs, reward, done, bad_done, timeout, info = env.step(action)
 
-        # Track done/bad_done/timeout for logging
-        reward_saved += reward
-        done_stat += done.sum().item()
-        bad_done_stat += bad_done.sum().item()
-        timeout_stat += timeout.sum().item()
+        current_episode_rewards += reward
 
-        total = done_stat + bad_done_stat + timeout_stat
-
-        # Crash Filtering
+        # 2. Define what ends an episode for LOGGING and RESETTING
+        # This MUST include timeouts!
         valid_mask = ~(torch.isnan(next_obs).any(dim=-1) | torch.isinf(next_obs).any(dim=-1))
-        real_done = done | bad_done | ~valid_mask
+        episode_ends = done | bad_done | timeout | ~valid_mask
 
-        episodic_reward = (reward_saved * real_done.float()).sum().item() / real_done.float().sum().item() if real_done.float().sum().item() > 0 else 0.0
-        reward_saved = reward_saved * (~real_done).float()
+        if episode_ends.any():
+            # 3. Extract the final scores of ONLY the environments that just finished
+            finished_scores = current_episode_rewards[episode_ends].cpu().numpy()
+            recent_scores.extend(finished_scores)
 
-        if algorithm == "attitude_agent":
-            agent.reset_pid_states(real_done)
+            # 4. Extract the specific reasons they finished to track win/crash rates
+            recent_successes.extend(done[episode_ends].cpu().numpy())
+            recent_crashes.extend((bad_done | ~valid_mask)[episode_ends].cpu().numpy())
+            recent_timeouts.extend(timeout[episode_ends].cpu().numpy())
 
-        # Store transition (Only store valid ones, or zero out broken ones)
-        buffer.push(obs, action, reward, next_obs, real_done)
+            # 5. Reset the accumulators ONLY for the environments that finished
+            current_episode_rewards[episode_ends] = 0.0
 
+            if algorithm == "attitude_agent":
+                agent.reset_pid_states(episode_ends)
+
+        # 6. Push to buffer (Strictly excluding timeouts for Bellman backup correctness!)
+        real_terminal_signal = done | bad_done | ~valid_mask
+        buffer.push(obs, action, reward, next_obs, real_terminal_signal)
+
+        # 7. NaN Observation Shield
         obs = torch.where(valid_mask.unsqueeze(-1), next_obs, torch.zeros_like(next_obs))
 
         if epoch > 10:
@@ -123,13 +133,18 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_
         mean_var_dict = {f"obs_mean/{i}": obs_mean[i].item() for i in range(obs_dim)}
         mean_var_dict.update({f"obs_var/{i}": obs_var[i].item() for i in range(obs_dim)})
 
+        avg_score = np.mean(recent_scores) if len(recent_scores) > 0 else 0.0
+        win_rate = np.mean(recent_successes) if len(recent_successes) > 0 else 0.0
+        crash_rate = np.mean(recent_crashes) if len(recent_crashes) > 0 else 0.0
+        timeout_rate = np.mean(recent_timeouts) if len(recent_timeouts) > 0 else 0.0
+
         if run is not None:
             log_dict = {
                 "time/average_epoch_time": epoch_time,
-                "env/episodic_reward": episodic_reward,
-                "env/done": done_stat / total if total > 0 else 0.0,
-                "env/bad_done": bad_done_stat / total if total > 0 else 0.0,
-                "env/timeout": timeout_stat / total if total > 0 else 0.0,
+                "env/episodic_reward": avg_score,
+                "env/success_rate": win_rate,
+                "env/crash_rate": crash_rate,
+                "env/timeout_rate": timeout_rate,
                 "velocity/total_error": obs[:, -1].abs().sum().item(),
                 "velocity/first_error": torch.abs(obs[0, -1]).item(),
             }
@@ -137,15 +152,15 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_
             log_dict.update(mean_var_dict)
             run.log(log_dict, step=epoch)
         else:
-            print(f"Epoch {epoch}, Reward: {episodic_reward:.2f}, Done: {done_stat / total if total > 0 else 0.0}, Bad Done: {bad_done_stat / total if total > 0 else 0.0}, Timeout: {timeout_stat / total if total > 0 else 0.0}, Epoch Time: {epoch_time:.4f}s")
+            print(f"Epoch {epoch}, Reward: {avg_score:.2f}, Success: {win_rate:.2f}, Crash: {crash_rate:.2f}, Timeout: {timeout_rate:.2f}, Epoch Time: {epoch_time:.4f}s")
 
         # Reset done/bad_done/timeout trackers
         done_stat = 0
         bad_done_stat = 0
         timeout_stat = 0
 
-        # Save the model after every 50 steps
-        if epoch % 50 == 0:
+        # Save the model after every 10000 steps
+        if epoch % 10000 == 0:
             print("Saving model...")
             run_name = wandb.run.name if wandb.run is not None else f"{start_time}"
             path = f"{data_path}{agent_config('name')}_{run_name}_recent.pt"
