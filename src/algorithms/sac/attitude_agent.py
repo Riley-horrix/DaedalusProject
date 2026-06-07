@@ -9,7 +9,7 @@ class AttitudeAgent(SACAgent):
     The action is the 4-dimensional control surface deflection, with thrust coming from a PID.
     """
     def __init__(self, obs_dim, action_dim, num_envs, device, config):
-        super().__init__(obs_dim - 1, action_dim - 1, num_envs, device, config)
+        super().__init__(obs_dim, action_dim, num_envs, device, config)
 
         self.kp = config('kp', default=0.05)
         self.ki = config('ki', default=0.001)

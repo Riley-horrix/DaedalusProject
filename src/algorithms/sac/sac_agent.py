@@ -15,15 +15,15 @@ class DoubleQCritic(nn.Module):
         self.q1 = nn.Sequential(
             nn.Linear(obs_dim + action_dim, hidden_dim),
             nn.SiLU(),
-            # nn.Linear(hidden_dim, hidden_dim),
-            # nn.SiLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.SiLU(),
             nn.Linear(hidden_dim, 1)
         )
         self.q2 = nn.Sequential(
             nn.Linear(obs_dim + action_dim, hidden_dim),
             nn.SiLU(),
-            # nn.Linear(hidden_dim, hidden_dim),
-            # nn.SiLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.SiLU(),
             nn.Linear(hidden_dim, 1)
         )
 
@@ -48,8 +48,8 @@ class GaussianActor(nn.Module):
         self.x1 = nn.Sequential(
             nn.Linear(obs_dim, hidden_dim),
             nn.SiLU(),
-            # nn.Linear(hidden_dim, hidden_dim),
-            # nn.SiLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.SiLU(),
         )
 
         self.mean_layer = nn.Linear(hidden_dim, action_dim)
@@ -152,10 +152,19 @@ class SACAgent(BaseAgent):
             weight_decay=0.0
         )
 
-    def act(self, obs: torch.Tensor) -> torch.Tensor:
+    def act(self, obs: torch.Tensor, deterministic: bool = False) -> torch.Tensor:
+        """
+        Selects an action from the policy.
+
+        Args:
+            obs: The environment observation.
+            deterministic: If True, bypasses the Gaussian noise and returns the squashed mean.
+                           Use False for training, True for evaluation/deployment.
+        """
         with torch.no_grad():
-            action, _, _ = self.actor.sample(obs)
-        return action
+            stochastic_action, _, deterministic_action = self.actor.sample(obs)
+
+        return deterministic_action if deterministic else stochastic_action
 
     def update(self, replay_buffer: ReplayBuffer, epochs: int, log: LoggingStruct):
         for epoch in range(epochs):

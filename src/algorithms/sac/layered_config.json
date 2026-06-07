@@ -2,9 +2,9 @@
   "name": "layered_sac_agent",
   "gamma": 0.99,
   "tau": 0.005,
-  "batch_size": 256,
-  "actor_hidden_dim": 256,
-  "critic_hidden_dim": 256,
+  "batch_size": 1024,
+  "actor_hidden_dim": 64,
+  "critic_hidden_dim": 64,
   "actor_learning_rate": 0.0003,
   "critic_learning_rate": 0.0003,
   "actor_weight_decay": 0.0,
@@ -12,5 +12,5 @@
   "init_alpha": 0.2,
   "alpha_learning_rate": 0.0003,
   "alpha_weight_decay": 0.0,
-  "inner_model_path" : "../models/att_agent.pt"
+  "inner_model_path" : "./data/sac_agent_driven-energy-77_recent.pt"
 }
