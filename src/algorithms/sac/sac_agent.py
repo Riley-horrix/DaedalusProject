@@ -8,6 +8,7 @@ from src.configs.config import Config
 from src.utils.logging import LoggingStruct
 from src.algorithms.base_agent import BaseAgent
 from src.utils.replay_buffer import ReplayBuffer
+from src.utils.running_average import RunningMeanStd
 
 class DoubleQCritic(nn.Module):
     def __init__(self, obs_dim: int, action_dim: int, hidden_dim=256):
@@ -134,6 +135,8 @@ class SACAgent(BaseAgent):
 
         self.critic_target.load_state_dict(self.critic.state_dict())
 
+        self.obs_norm = RunningMeanStd(shape=(obs_dim,), device=device)
+
         self.actor_optim = torch.optim.Adam(
             self.actor.parameters(),
             lr=config('actor_learning_rate'),
@@ -152,7 +155,7 @@ class SACAgent(BaseAgent):
             weight_decay=0.0
         )
 
-    def act(self, obs: torch.Tensor, deterministic: bool = False) -> torch.Tensor:
+    def act(self, obs: torch.Tensor, deterministic: bool = False, update_norm: bool = False) -> torch.Tensor:
         """
         Selects an action from the policy.
 
@@ -161,6 +164,11 @@ class SACAgent(BaseAgent):
             deterministic: If True, bypasses the Gaussian noise and returns the squashed mean.
                            Use False for training, True for evaluation/deployment.
         """
+        if update_norm:
+            self.obs_norm.update(obs)
+
+        obs = self.obs_norm(obs)
+
         with torch.no_grad():
             stochastic_action, _, deterministic_action = self.actor.sample(obs)
 
@@ -178,6 +186,10 @@ class SACAgent(BaseAgent):
 
             rewards = rewards.view(self.batch_size * self.num_envs, 1)
             dones = dones.view(self.batch_size * self.num_envs, 1).float()
+
+            with torch.no_grad():
+                obs = self.obs_norm(obs)
+                next_obs = self.obs_norm(next_obs)
 
             # Critic update
             with torch.no_grad():
@@ -258,6 +270,7 @@ class SACAgent(BaseAgent):
             'actor_state_dict': self.actor.state_dict(),
             'critic_state_dict': self.critic.state_dict(),
             'critic_target_state_dict': self.critic_target.state_dict(),
+            'obs_norm_state_dict': self.obs_norm.state_dict(),
             'optimizer_state_dict': {
                 'actor': self.actor_optim.state_dict(),
                 'critic': self.critic_optim.state_dict(),
@@ -274,5 +287,6 @@ class SACAgent(BaseAgent):
         self.critic_target.load_state_dict(data['critic_target_state_dict'])
         self.actor_optim.load_state_dict(data['optimizer_state_dict']['actor'])
         self.critic_optim.load_state_dict(data['optimizer_state_dict']['critic'])
+        self.obs_norm.load_state_dict(data['obs_norm_state_dict'])
         self.alpha_optim.load_state_dict(data['optimizer_state_dict']['alpha'])
         self.log_alpha.data.copy_(data['log_alpha'].data)
