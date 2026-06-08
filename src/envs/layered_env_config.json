@@ -2,7 +2,7 @@
     "name": "layered_env",
     "env_name": "neural_plane",
     "env_type": "tracking",
-    "num_envs": 256,
+    "num_envs": 512,
     "buffer_capacity": 16384,
     "epochs": 1000000,
     "min_init_altitude": 3000.0,

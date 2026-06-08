@@ -12,5 +12,5 @@
   "init_alpha": 0.2,
   "alpha_learning_rate": 0.0003,
   "alpha_weight_decay": 0.0,
-  "inner_model_path" : "./data/sac_agent_driven-energy-77_recent.pt"
+  "inner_model_path" : "./data/sac_agent_hearty-spaceship-82_recent.pt"
 }
