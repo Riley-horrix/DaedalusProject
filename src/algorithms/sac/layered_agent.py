@@ -50,47 +50,41 @@ class LayeredSACAgent(SACAgent):
 
         self.last_outer_action = outer_action.clone()
 
-        # 2. Un-squash outer actions to physical flight envelope targets
         target_beta = outer_action[:, 0] * 0.0  # Force coordinated flight
         target_pitch = outer_action[:, 1] * self.max_pitch_target
         target_roll = outer_action[:, 2] * self.max_roll_target
         target_vt_delta = outer_action[:, 3] * self.max_vt_target_delta
 
-        # 3. Extract exact states mapped from TrackingTask's 22-dim observation
         roll = torch.atan2(obs[:, 4], obs[:, 5])   # 4: roll_sin, 5: roll_cos
         pitch = torch.atan2(obs[:, 6], obs[:, 7])  # 6: pitch_sin, 7: pitch_cos
         beta = torch.atan2(obs[:, 11], obs[:, 12]) # 11: beta_sin, 12: beta_cos
 
-        # Reconstruct True Airspeed (VT) from Equivalent Airspeed (EAS)
         norm_EAS = obs[:, 8]
         eas2tas = obs[:, 21]
         eas_fts = norm_EAS * 340.0 / 0.3048
         vt_fts = eas_fts * eas2tas
         target_vt = vt_fts + target_vt_delta
 
-        # Extract Control Surfaces and Kinematics from TrackingTask
         norm_P = obs[:, 13]
         norm_Q = obs[:, 14]
         norm_R = obs[:, 15]
-        norm_thr = obs[:, 16] # Mapping TrackingTask norm_T to AttitudeTask norm_thr
+
+        # norm_thr = obs[:, 16]
+        norm_thr = torch.zeros_like(obs[:, 16])
         norm_el = obs[:, 17]
         norm_ail = obs[:, 18]
         norm_rud = obs[:, 19]
-        # Note: Index 20 (norm_lef) is ignored as the inner loop does not use it
 
-        # 4. Calculate tracking errors
         e_beta = self._wrap_pi(target_beta - beta)
         e_pitch = self._wrap_pi(target_pitch - pitch)
         e_roll = self._wrap_pi(target_roll - roll)
         delta_vt_fts = vt_fts - target_vt
 
-        # 5. Apply AttitudeTask weighting scalars
         weighted_e_beta = e_beta * (6.0 / torch.pi) * 4.0
         weighted_e_pitch = e_pitch * (6.0 / torch.pi) * 1.0
         weighted_e_roll = e_roll * (6.0 / torch.pi) * 1.0
         weighted_e_vel = delta_vt_fts * ((6.0 / torch.pi) * 0.5) / self.max_velocities_u_increment
 
-        # 6. Construct the exact 11-dimensional Inner Observation for AttitudeTask
         inner_obs = torch.stack([
             weighted_e_beta,   # 0
             weighted_e_pitch,  # 1
