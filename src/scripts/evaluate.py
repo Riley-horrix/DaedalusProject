@@ -8,13 +8,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from src.algorithms.sac.sac_agent import SACAgent
-from src.algorithms.sac.attitude_agent import AttitudeAgent
-from src.algorithms.td3.td3_agent import TD3Agent
+from src.algorithms.sac.layered_agent import LayeredSACAgent
 from src.configs.config import Config
 from src.envs.base_env import env_from_config
 from src.utils.math import enu_to_geodetic
 
-def export_batch_acmi(filename, step_idx, dt, npos, epos, alt, roll, pitch, yaw, t_npos=None, t_epos=None, t_alt=None, t_pitch=None, t_heading=None, mask=None):
+def export_batch_acmi(filename, step_idx, dt, npos, epos, alt, roll, pitch, yaw, t_npos=None, t_epos=None, t_alt=None, mask=None):
     os.makedirs(os.path.dirname(filename), exist_ok=True)
     mode = 'w' if step_idx == 0 else 'a'
     current_time = step_idx * dt
@@ -60,18 +59,8 @@ def export_batch_acmi(filename, step_idx, dt, npos, epos, alt, roll, pitch, yaw,
                 else:
                     f.write(f"{t_id},T={t_lon}|{t_lat}|{t_h}\n")
 
-            if t_pitch is not None and t_heading is not None:
-                t_p = math.degrees(t_pitch[i].item())
-                t_y = math.degrees(t_heading[i].item())
-                t_id = f"T{100 + i}"
 
-                if step_idx == 0:
-                    f.write(f"{t_id},T={lon}|{lat}|{h}|0|{t_p}|{t_y},Name=Target #{i+1},Type=Waypoint,Color=Blue\n")
-                else:
-                    f.write(f"{t_id},T={lon}|{lat}|{h}|0|{t_p}|{t_y}\n")
-
-
-def run_evaluate(env_config: Config, agent_config: Config, models: list[str], path_base: str):
+def run_evaluate(env_config: Config, agent_config: Config, models: list[str], path_base: str, attitude_config: Config = None):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
@@ -86,25 +75,27 @@ def run_evaluate(env_config: Config, agent_config: Config, models: list[str], pa
     algorithm = agent_config('name')
     if algorithm == "sac_agent":
         agents = [SACAgent(obs_dim, action_dim, 10, device, agent_config) for _ in range(len(models))]
-    elif algorithm == "td3_agent":
-        obs_dim = 14
-        agents = [TD3Agent(obs_dim, action_dim, 10, device, agent_config) for _ in range(len(models))]
-    elif algorithm == "attitude_agent":
-        obs_dim = 14
-        agents = [AttitudeAgent(obs_dim, action_dim, 10, device, agent_config) for _ in range(len(models))]
+    if algorithm == "layered_sac_agent":
+        agents = [LayeredSACAgent(obs_dim, action_dim, 10, device, agent_config, attitude_config) for _ in range(len(models))]
+        inner_model_path = agent_config('inner_model_path', None)
+        if inner_model_path is not None:
+            print(f"Loading pre-trained inner attitude agent from {inner_model_path}...")
+            for agent in agents:
+                agent.load_inner_agent(inner_model_path)
+        else:
+            ValueError("WARNING: No pre-trained inner agent provided. The outer agent will struggle to learn!")
     else:
         raise ValueError(f"Unsupported algorithm: {algorithm}")
 
-    # Load .pt files into agents
+    # Load models into agents
     for i in range(len(models)):
         agents[i].load(models[i])
 
     reward_history = []
     action_history = []
+    obs_history = []
 
     path = path_base
-
-    tracking_task = env_config('env_type') == 'tracking'
 
     print("Starting evaluation loop")
     for model_idx in range(len(models)):
@@ -117,41 +108,22 @@ def run_evaluate(env_config: Config, agent_config: Config, models: list[str], pa
         model_name = models[model_idx].split("/")[-1]
         for epoch in range(env_config('epochs')):
             with torch.no_grad():
-                # Differentiate inference between TD3 (deterministic flag) and stochastic agents
-                if algorithm == "td3_agent":
-                    action = agent.act(obs, add_noise=False)
-                else:
-                    action = agent.act(obs)
+                    action = agent.act(obs, deterministic=True)
 
             next_obs, reward, done, bad_done, timeout, info = env.step(action)
 
-            # Reset PID states for AttitudeAgent if the episode terminates
-            if algorithm == "attitude_agent":
-                valid_mask = ~(torch.isnan(next_obs).any(dim=-1) | torch.isinf(next_obs).any(dim=-1))
-                real_done = done | bad_done | ~valid_mask
-                agent.reset_pid_states(real_done)
-
             reward_history.append(reward_history[-1] + reward.squeeze().detach().cpu().numpy() if len(reward_history) > 0 else 0 + reward.squeeze().detach().cpu().numpy())
-            action_history.append(action[1,:].squeeze().detach().cpu().numpy() if action.shape[0] > 1 else action[0,:].squeeze().detach().cpu().numpy())
+            action_history.append(action[0,:].squeeze().detach().cpu().numpy())
+            obs_history.append(next_obs[0,:].squeeze().detach().cpu().numpy())
 
             mask |= done | bad_done | timeout
 
             raw_npos, raw_epos, raw_alt = env.env.model.get_position()
             roll, pitch, yaw = env.env.model.get_posture()
 
-            # Pull the target coordinates from the task memory
-            if tracking_task:
-                t_npos = env.env.task.target_npos
-                t_epos = env.env.task.target_epos
-                t_alt = env.env.task.target_altitude
-                t_pitch = None
-                t_heading = None
-            else:
-                t_npos = None
-                t_epos = None
-                t_alt = None
-                t_pitch = env.env.task.target_pitch
-                t_heading = getattr(env.env.task, 'target_heading', None)
+            t_npos = env.env.task.target_npos
+            t_epos = env.env.task.target_epos
+            t_alt = env.env.task.target_altitude
 
             # Export telemetry to Tacview ACMI format
             export_batch_acmi(
@@ -165,11 +137,9 @@ def run_evaluate(env_config: Config, agent_config: Config, models: list[str], pa
                 roll=roll,
                 pitch=pitch,
                 yaw=yaw,
-                t_npos=t_npos * 0.3048 if t_npos is not None else None,
-                t_epos=t_epos * 0.3048 if t_epos is not None else None,
-                t_alt=t_alt * 0.3048 if t_alt is not None else None,
-                t_pitch=t_pitch,
-                t_heading=t_heading,
+                t_npos=t_npos * 0.3048,
+                t_epos=t_epos * 0.3048,
+                t_alt=t_alt * 0.3048,
                 mask=mask
             )
 
@@ -236,13 +206,82 @@ def run_evaluate(env_config: Config, agent_config: Config, models: list[str], pa
         plt.close()
         print(f"Saved action subplot to {plot_path}")
 
+        # Now also plot flight statistics for first agent
+        flight_obs = np.array(obs_history)
+
+        tracking_datas = [
+            flight_obs[:, 0],  # Norm Distance
+            flight_obs[:, 1],  # Azimuth Error
+            flight_obs[:, 2],  # Elevation Error
+            flight_obs[:, 3]   # Altitude
+        ]
+
+        plot_graph(
+            title=f"Tracking Flight Statistics\nModel: {model_name}",
+            titles=["Norm Distance from Target", "Azimuth Error", "Elevation Error", "Altitude"],
+            ys=["Distance (km)", "Angle (Rad)", "Angle (Rad)", "Altitude (5km)"],
+            x="Time step",
+            datas=tracking_datas,
+            save_path=f"{path}evaluation_tracking_{model_name}.png",
+            colors=['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728']
+        )
+
+        # Reconstruct actual angles (in radians) from the trigonometric states using arctan2(sin, cos)
+        roll = np.arctan2(flight_obs[:, 4], flight_obs[:, 5])
+        pitch = np.arctan2(flight_obs[:, 6], flight_obs[:, 7])
+        alpha = np.arctan2(flight_obs[:, 9], flight_obs[:, 10]) # Angle of Attack
+        beta = np.arctan2(flight_obs[:, 11], flight_obs[:, 12]) # Angle of Sideslip
+
+        attitude_datas = [
+            roll,
+            pitch,
+            alpha,
+            beta
+        ]
+
+        plot_graph(
+            title=f"Vehicle Attitude Statistics\nModel: {model_name}",
+            titles=["Roll Angle (\u03B8)", "Pitch Angle (\u03C6)", "Angle of Attack (\u03B1)", "Angle of Sideslip (\u03B2)"],
+            ys=["Angle (Rad)", "Angle (Rad)", "Angle (Rad)", "Angle (Rad)"],
+            x="Time step",
+            datas=attitude_datas,
+            save_path=f"{path}evaluation_attitude_{model_name}.png",
+            colors=['#9467bd', '#8c564b', '#e377c2', '#7f7f7f']
+        )
+
+
+def plot_graph(title: str, titles: list[str], ys: list[str], x: str, datas: list[np.ndarray], save_path: str, colors: list[str] = None):
+    num_plots = len(datas)
+    cols = 2
+    rows = math.ceil(num_plots / cols)
+
+    plt.figure(figsize=(12, 4 * rows))
+    plt.suptitle(title, fontsize=16, fontweight='bold')
+
+    for i in range(num_plots):
+        plt.subplot(rows, cols, i + 1)
+        plot_color = colors[i % len(colors)] if colors else '#1f77b4'
+        plt.plot(datas[i], alpha=0.8, color=plot_color)
+        plt.title(titles[i])
+        plt.xlabel(x)
+        plt.ylabel(ys[i])
+        plt.grid(True, alpha=0.4)
+        plt.legend()
+
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=300)
+    plt.close()
+    print(f"Saved plot '{title}' to {save_path}")
+
 if __name__ == "__main__":
     env_config = Config('evaluate_env')
-    agent_config = Config('attitude_agent')
+    agent_config = Config('layered_sac_agent')
+    att_config = Config('sac_agent')
 
     env_config.load_from_file('src/envs/evaluate_env_config.json')
-    agent_config.load_from_file('src/algorithms/sac/attitude_config.json')
+    agent_config.load_from_file('src/algorithms/sac/layered_config.json')
+    att_config.load_from_file('src/algorithms/sac/sac_config.json')
 
     print(f"Evaluating models, {sys.argv[2:]}")
 
-    run_evaluate(env_config, agent_config, sys.argv[2:], sys.argv[1])
+    run_evaluate(env_config, agent_config, sys.argv[2:], sys.argv[1], attitude_config=att_config)

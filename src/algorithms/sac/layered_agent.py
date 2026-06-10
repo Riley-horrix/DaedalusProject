@@ -55,15 +55,15 @@ class LayeredSACAgent(SACAgent):
         target_roll = outer_action[:, 2] * self.max_roll_target
         target_vt_delta = outer_action[:, 3] * self.max_vt_target_delta
 
-        roll = torch.atan2(obs[:, 4], obs[:, 5])   # 4: roll_sin, 5: roll_cos
-        pitch = torch.atan2(obs[:, 6], obs[:, 7])  # 6: pitch_sin, 7: pitch_cos
-        beta = torch.atan2(obs[:, 11], obs[:, 12]) # 11: beta_sin, 12: beta_cos
+        roll = torch.atan2(obs[:, 4], obs[:, 5])
+        pitch = torch.atan2(obs[:, 6], obs[:, 7])
+        beta = torch.atan2(obs[:, 11], obs[:, 12])
 
         norm_EAS = obs[:, 8]
         eas2tas = obs[:, 21]
         eas_fts = norm_EAS * 340.0 / 0.3048
         vt_fts = eas_fts * eas2tas
-        target_vt = vt_fts + target_vt_delta
+        delta_vt_fts = -target_vt_delta
 
         norm_P = obs[:, 13]
         norm_Q = obs[:, 14]
@@ -78,7 +78,6 @@ class LayeredSACAgent(SACAgent):
         e_beta = self._wrap_pi(target_beta - beta)
         e_pitch = self._wrap_pi(target_pitch - pitch)
         e_roll = self._wrap_pi(target_roll - roll)
-        delta_vt_fts = vt_fts - target_vt
 
         weighted_e_beta = e_beta * (6.0 / torch.pi) * 4.0
         weighted_e_pitch = e_pitch * (6.0 / torch.pi) * 1.0
@@ -99,7 +98,6 @@ class LayeredSACAgent(SACAgent):
             norm_R             # 10
         ], dim=-1)
 
-        # 7. Query the frozen Inner Agent for physical control surface deflections
         with torch.no_grad():
             if isinstance(self.attitude_agent, SACAgent):
                 action = self.attitude_agent.act(inner_obs, deterministic=True)

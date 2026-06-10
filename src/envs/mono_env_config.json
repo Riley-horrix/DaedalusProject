@@ -3,7 +3,7 @@
     "env_name": "neural_plane",
     "env_type": "tracking",
     "num_envs": 256,
-    "buffer_capacity": 65536,
+    "buffer_capacity": 262144,
     "epochs": 1000000,
     "min_init_altitude": 3000.0,
     "max_init_altitude": 7000.0,

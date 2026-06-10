@@ -9,7 +9,7 @@ if __name__ == "__main__":
     # agent_config = Config('td3_agent')
     agent_config = Config('sac_agent')
 
-    env_config.load_from_file('src/envs/env_config.json')
+    env_config.load_from_file('src/envs/mono_env_config.json')
     # agent_config.load_from_file('src/algorithms/td3/td3_config.json')
     agent_config.load_from_file('src/algorithms/sac/sac_config.json')
 
