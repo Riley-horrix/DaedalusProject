@@ -72,13 +72,12 @@ def run_evaluate(env_config: Config, agent_config: Config, models: list[str], pa
     obs_dim = env.obs_dim
     action_dim = env.action_dim
 
-    # Init all models
+    # Init models
     algorithm = agent_config('name')
     if algorithm == "sac_agent":
         agents = [SACAgent(obs_dim, action_dim, 10, device, agent_config) for _ in range(len(models))]
     if algorithm == "layered_sac_agent":
-        # agents = [LayeredSACAgent(obs_dim, action_dim, 10, device, agent_config, attitude_config) for _ in range(len(models))]
-        agents = [AlgorithmicLayeredAgent(10, device, attitude_config) for _ in range(len(models))]
+        agents = [LayeredSACAgent(obs_dim, action_dim, 10, device, agent_config, attitude_config) for _ in range(len(models))]
         inner_model_path = agent_config('inner_model_path', None)
         if inner_model_path is not None:
             print(f"Loading pre-trained inner attitude agent from {inner_model_path}...")
@@ -90,8 +89,8 @@ def run_evaluate(env_config: Config, agent_config: Config, models: list[str], pa
         raise ValueError(f"Unsupported algorithm: {algorithm}")
 
     # Load models into agents
-    # for i in range(len(models)):
-    #     agents[i].load(models[i])
+    for i in range(len(models)):
+        agents[i].load(models[i])
 
     reward_history = []
     action_history = []

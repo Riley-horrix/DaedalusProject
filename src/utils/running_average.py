@@ -32,6 +32,5 @@ class RunningMeanStd(nn.Module):
         self.count = total_count
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # Normalize and clip to [-10, 10] to prevent catastrophic gradient explosions from physics glitches
         norm_x = (x - self.mean) / torch.sqrt(self.var + self.epsilon)
         return torch.clamp(norm_x, -10.0, 10.0)

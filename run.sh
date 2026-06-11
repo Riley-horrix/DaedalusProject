@@ -1,1 +1,0 @@
-nohup python -m src.scripts.runner --wandb > training_output.log 2>&1 &

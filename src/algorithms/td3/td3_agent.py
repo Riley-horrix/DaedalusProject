@@ -70,7 +70,6 @@ class TD3Agent(BaseAgent):
         self.tau = config('tau')
         self.batch_size = config('batch_size')
 
-        # TD3 Specific Hyperparameters
         self.exploration_noise = config('exploration_noise', 0.1)
         self.target_noise = config('target_noise', 0.2)
         self.noise_clip = config('noise_clip', 0.5)
@@ -78,12 +77,10 @@ class TD3Agent(BaseAgent):
 
         self.total_it = 0 # Step counter for delayed updates
 
-        # Actor and Target Actor
         self.actor = DeterministicActor(obs_dim, action_dim, config('actor_hidden_dim')).to(device)
         self.actor_target = DeterministicActor(obs_dim, action_dim, config('actor_hidden_dim')).to(device)
         self.actor_target.load_state_dict(self.actor.state_dict())
 
-        # Critic and Target Critic
         self.critic = DoubleQCritic(obs_dim, action_dim, config('critic_hidden_dim')).to(device)
         self.critic_target = DoubleQCritic(obs_dim, action_dim, config('critic_hidden_dim')).to(device)
         self.critic_target.load_state_dict(self.critic.state_dict())
@@ -114,7 +111,7 @@ class TD3Agent(BaseAgent):
         for epoch in range(epochs):
             self.total_it += 1
 
-            # Sample a batch from the replay buffer
+            # Sample batch from the replay buffer
             obs, actions, rewards, next_obs, dones = replay_buffer.sample(self.batch_size)
 
             obs = obs[..., :self.obs_dim].view(-1, self.obs_dim)
@@ -124,9 +121,8 @@ class TD3Agent(BaseAgent):
             rewards = rewards.view(-1, 1)
             dones = dones.view(-1, 1).float()
 
-            # ---------------- Critic Update ---------------- #
             with torch.no_grad():
-                # Target Policy Smoothing: Add clipped noise to the target action
+                # Add clipped noise to the target action
                 noise = (torch.randn_like(actions) * self.target_noise).clamp(-self.noise_clip, self.noise_clip)
                 next_actions = (self.actor_target(next_obs) + noise).clamp(-1.0, 1.0)
 
@@ -145,13 +141,12 @@ class TD3Agent(BaseAgent):
             critic_2_loss = F.mse_loss(current_q2, target_value)
             critic_loss = critic_1_loss + critic_2_loss
 
-            # Optimize Critic
+            # Optimise Critic
             self.critic_optim.zero_grad()
             critic_loss.backward()
             torch.nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm=1.0)
             self.critic_optim.step()
 
-            # ---------------- Delayed Actor Update ---------------- #
             actor_loss = torch.tensor(0.0, device=self.device) # Fallback for logging if not updated
 
             if self.total_it % self.policy_delay == 0:
@@ -159,13 +154,13 @@ class TD3Agent(BaseAgent):
                 q1_new, _ = self.critic(obs, self.actor(obs))
                 actor_loss = -q1_new.mean()
 
-                # Optimize Actor
+                # Optimise Actor
                 self.actor_optim.zero_grad()
                 actor_loss.backward()
                 torch.nn.utils.clip_grad_norm_(self.actor.parameters(), max_norm=1.0)
                 self.actor_optim.step()
 
-                # Target network soft updates (Polyak Averaging)
+                # Target network soft updates
                 with torch.no_grad():
                     for param, target_param in zip(self.critic.parameters(), self.critic_target.parameters()):
                         target_param.data.copy_(self.tau * param.data + (1.0 - self.tau) * target_param.data)

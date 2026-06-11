@@ -21,7 +21,6 @@ def train_layered(env_config: Config, agent_config: Config, attitude_config: Con
     obs_dim = env.obs_dim
     num_envs = env_config('num_envs')
 
-    # Outer agent outputs 4 targets: beta, pitch, roll, vt
     outer_action_dim = 4
 
     # Init Layered Agent
@@ -39,19 +38,15 @@ def train_layered(env_config: Config, agent_config: Config, attitude_config: Con
         print(f"Loading outer model from {load_model}...")
         agent.load(load_model)
 
-    # Init buffer (Must be sized for the outer_action_dim!)
     buffer = ReplayBuffer(obs_dim, outer_action_dim, env_config('buffer_capacity'), num_envs, device)
 
-    # Init logging
     log = LoggingStruct()
 
     print("Starting training loop")
     obs = env.reset()
 
-    # Trackers for the CURRENT running episodes
     current_episode_rewards = torch.zeros(num_envs, dtype=torch.float32, device=device)
 
-    # Deques to store the final metrics of the LAST 100 completed episodes
     recent_scores = deque(maxlen=100)
     recent_successes = deque(maxlen=100)
     recent_crashes = deque(maxlen=100)
@@ -67,40 +62,31 @@ def train_layered(env_config: Config, agent_config: Config, attitude_config: Con
 
         physical_action = agent.act(obs)
 
-        # Update mean and std of observations for logging
         obs_mean = 0.99 * obs_mean + 0.01 * obs.mean(dim=0)
         obs_var = 0.99 * obs_var + 0.01 * obs.var(dim=0)
 
         next_obs, reward, done, bad_done, timeout, info = env.step(physical_action)
 
-        # 2. Accumulate rewards for the current step
         current_episode_rewards += reward
 
-        # 3. Define what ends an episode for LOGGING and RESETTING (Includes timeouts)
         valid_mask = ~(torch.isnan(next_obs).any(dim=-1) | torch.isinf(next_obs).any(dim=-1))
         episode_ends = done | bad_done | timeout | ~valid_mask
 
         if episode_ends.any():
-            # Extract final scores of the environments that just finished
             finished_scores = current_episode_rewards[episode_ends].cpu().numpy()
             recent_scores.extend(finished_scores)
 
-            # Extract reasons for termination
             recent_successes.extend(done[episode_ends].cpu().numpy())
             recent_crashes.extend((bad_done | ~valid_mask)[episode_ends].cpu().numpy())
             recent_timeouts.extend(timeout[episode_ends].cpu().numpy())
 
-            # Reset accumulators for finished environments
             current_episode_rewards[episode_ends] = 0.0
 
-        # 4. Push to buffer
         real_terminal_signal = done | bad_done | ~valid_mask
         buffer.push(obs, agent.last_outer_action, reward, next_obs, real_terminal_signal)
 
-        # 5. NaN Observation Shield
         obs = torch.where(valid_mask.unsqueeze(-1), next_obs, torch.zeros_like(next_obs))
 
-        # 6. Update Agent
         if epoch > 10:
             agent.update(buffer, 10, log)
 

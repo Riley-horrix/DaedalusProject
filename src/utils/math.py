@@ -29,6 +29,7 @@ def enu_to_ecef(xEast, yNorth, zUp, lat0, lon0, h0):
     z = zd + z0
     return x, y, z
 
+# From NeuralPlane
 def ecef_to_geodetic(x, y, z):
     # SAFETY CHECK: If coordinates are exploding, return dummy values
     # Python floats overflow around 1e308. We clip way before that.

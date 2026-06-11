@@ -1,1 +1,1 @@
-should_log = False
+should_log = True

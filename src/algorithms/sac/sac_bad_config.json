@@ -1,9 +1,0 @@
-{
-    "name": "sac_agent",
-    "learning_rate": 3e-4,
-    "hidden_sizes": [128, 128],
-    "batch_size": 256,
-    "gamma": 0.99,
-    "tau": 0.005,
-    "target_entropy": "auto"
-}

@@ -105,7 +105,7 @@ class GaussianActor(nn.Module):
         y_t = torch.tanh(x_t)
         action = y_t
 
-        # Calculate log probability
+        # log probability
         log_prob = normal.log_prob(x_t)
 
         # Enforcing action bounds (see appendix C of SAC paper for details)
@@ -191,7 +191,6 @@ class SACAgent(BaseAgent):
                 obs = self.obs_norm(obs)
                 next_obs = self.obs_norm(next_obs)
 
-            # Critic update
             with torch.no_grad():
                 # Get next actions and entropy from current policy
                 next_actions, next_log_probs, _ = self.actor.sample(next_obs)
@@ -203,7 +202,6 @@ class SACAgent(BaseAgent):
                 min_target_q = torch.min(target_q1, target_q2) - torch.exp(self.log_alpha) * next_log_probs
 
                 # Calculate the Bellman backup (y)
-                # If done=True (1.0), the future value is 0.
                 target_value = rewards + (1.0 - dones.float()) * self.gamma * min_target_q
 
             # Get current Q values from current critics
@@ -214,7 +212,7 @@ class SACAgent(BaseAgent):
             critic_2_loss = F.mse_loss(current_q2, target_value)
             critic_loss = critic_1_loss + critic_2_loss
 
-            # Optimize Critic
+            # Optimise Critic
             self.critic_optim.zero_grad()
             critic_loss.backward()
             torch.nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm=1.0)
@@ -228,8 +226,8 @@ class SACAgent(BaseAgent):
             q1_new, q2_new = self.critic(obs, new_actions)
             min_q_new = torch.min(q1_new, q2_new)
 
-            # Actor wants to maximize Q-value and maximize entropy.
-            # PyTorch minimizes by default, so we minimize: (alpha * log_prob) - Q
+            # Actor wants to maximise Q-value and maximise entropy.
+            # PyTorch minimises by default, so we minimise: (alpha * log_prob) - Q
             actor_loss = (self.log_alpha.exp().detach() * log_probs - min_q_new).mean()
 
             # Optimize Actor
@@ -248,13 +246,13 @@ class SACAgent(BaseAgent):
             alpha_loss.backward()
             self.alpha_optim.step()
 
-            # Target network soft update (Polyak Averaging)
+            # Target network soft update
             # Slowly blend the current critic weights into the target critic
             with torch.no_grad():
                 for param, target_param in zip(self.critic.parameters(), self.critic_target.parameters()):
                     target_param.data.copy_(self.tau * param.data + (1.0 - self.tau) * target_param.data)
 
-            # Finally, log any useful metrics on the final epoch cycle
+            # Finally, log metrics on the final epoch cycle
             if epoch == epochs - 1:
                 log.update({
                     "loss/critic_1": critic_1_loss.item(),

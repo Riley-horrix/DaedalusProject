@@ -3,7 +3,7 @@
     "env_name": "neural_plane",
     "env_type": "tracking",
     "num_envs": 10,
-    "epochs": 4096,
+    "epochs": 1500,
     "min_init_altitude": 6000.0,
     "max_init_altitude": 6000.0,
     "min_init_v": 350.0,

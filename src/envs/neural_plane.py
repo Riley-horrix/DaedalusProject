@@ -2,7 +2,6 @@ import torch
 import sys
 import os
 
-# Ensure the NeuralPlane library is accessible just like in your test script
 current_dir = os.path.dirname(os.path.abspath(__file__))
 neural_plane_path = os.path.join(current_dir, './lib/NeuralPlane')
 if neural_plane_path not in sys.path:
@@ -27,7 +26,6 @@ class NeuralPlaneEnv(BaseEnv):
             raise ValueError(f"Unsupported env_type: {config('env_type')}")
 
 
-        # Setup environment parameters based on config
         self.env.model.min_altitude = config('min_init_altitude', default=1000.0)
         self.env.model.max_altitude = config('max_init_altitude', default=10000.0)
         self.env.model.min_vt = config('min_init_v', default=150.0)

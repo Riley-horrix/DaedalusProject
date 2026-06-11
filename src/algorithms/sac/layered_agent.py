@@ -14,9 +14,9 @@ class LayeredSACAgent(SACAgent):
     def __init__(self, obs_dim, action_dim, num_envs, device, config, attitude_config):
         super().__init__(obs_dim, action_dim, num_envs, device, config)
 
-        # The AttitudeTask defines exactly 11 observation dimensions.
+        # The AttitudeTask has 11 observation dimensions.
         inner_obs_dim = 11
-        inner_action_dim = 4 # el, ail, rud, thr
+        inner_action_dim = 4
 
         if attitude_config("name") == "attitude_agent":
             self.attitude_agent = AttitudeAgent(inner_obs_dim, inner_action_dim, num_envs, device, attitude_config)
@@ -27,23 +27,21 @@ class LayeredSACAgent(SACAgent):
         else:
             raise ValueError(f"Unsupported inner agent algorithm: {attitude_config('name')}")
 
-        # Freeze the inner agent completely to prevent catastrophic forgetting
+        # Freeze the inner agent
         for param in self.attitude_agent.actor.parameters():
             param.requires_grad = False
 
         self.last_outer_action = None
 
-        # Physical limits to un-squash outer loop actions
-        self.max_pitch_target = 0.5  # radians (~28 degrees)
-        self.max_roll_target = 1.0   # radians (~57 degrees)
-        self.max_vt_target_delta = 100.0 # ft/s
-        self.max_velocities_u_increment = 100.0 # From AttitudeTask
+        self.max_pitch_target = 0.5
+        self.max_roll_target = 1.0
+        self.max_vt_target_delta = 100.0
+        self.max_velocities_u_increment = 100.0
 
     def _wrap_pi(self, angles):
         return (angles + torch.pi) % (2 * torch.pi) - torch.pi
 
     def act(self, obs: torch.Tensor, deterministic: bool = False) -> torch.Tensor:
-        # 1. Get [-1, 1] normalized targets from the Outer Policy (TrackingTask)
         with torch.no_grad():
             stochastic_action, _, deterministic_action = self.actor.sample(obs)
         outer_action = deterministic_action if deterministic else stochastic_action
@@ -69,8 +67,7 @@ class LayeredSACAgent(SACAgent):
         norm_Q = obs[:, 14]
         norm_R = obs[:, 15]
 
-        # norm_thr = obs[:, 16]
-        norm_thr = torch.zeros_like(obs[:, 16])
+        norm_thr = obs[:, 16]
         norm_el = obs[:, 17]
         norm_ail = obs[:, 18]
         norm_rud = obs[:, 19]

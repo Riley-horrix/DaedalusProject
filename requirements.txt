@@ -1,7 +1,9 @@
 absl-py==2.4.0
+annotated-types==0.7.0
 brotli==1.2.0
 certifi==2026.1.4
 charset-normalizer==3.4.4
+click==8.3.3
 cloudpickle==3.1.2
 constantly==23.10.4
 contourpy==1.3.3
@@ -10,6 +12,8 @@ Farama-Notifications==0.0.4
 filelock==3.24.0
 fonttools==4.61.1
 fsspec==2026.2.0
+gitdb==4.0.12
+GitPython==3.1.47
 gmpy2==2.3.0
 grpcio==1.78.0
 gym==0.26.2
@@ -27,8 +31,11 @@ numpy==1.26.4
 packaging==26.0
 pandas==3.0.0
 pillow==12.1.1
+platformdirs==4.9.6
 protobuf==6.33.5
 pyacmi==1.2.4
+pydantic==2.13.3
+pydantic_core==2.46.3
 pyparsing==3.3.2
 PySocks==1.7.1
 python-dateutil==2.9.0.post0
@@ -36,8 +43,10 @@ pytz==2025.2
 PyYAML==6.0.3
 requests==2.32.5
 scipy==1.17.0
+sentry-sdk==2.58.0
 setuptools==82.0.0
 six==1.17.0
+smmap==5.0.3
 sortedcontainers==2.4.0
 sympy==1.14.0
 tensorboard==2.20.0
@@ -47,9 +56,10 @@ torchaudio==2.2.2
 torchdiffeq==0.2.5
 torchvision==0.17.2
 tqdm==4.67.3
+typing-inspection==0.4.2
 typing_extensions==4.15.0
 tzdata==2025.3
 urllib3==2.6.3
-wandb
+wandb==0.26.0
 Werkzeug==3.1.5
 wheel==0.46.3

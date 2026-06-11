@@ -81,32 +81,25 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_
 
         current_episode_rewards += reward
 
-        # 2. Define what ends an episode for LOGGING and RESETTING
-        # This MUST include timeouts!
         valid_mask = ~(torch.isnan(next_obs).any(dim=-1) | torch.isinf(next_obs).any(dim=-1))
         episode_ends = done | bad_done | timeout | ~valid_mask
 
         if episode_ends.any():
-            # 3. Extract the final scores of ONLY the environments that just finished
             finished_scores = current_episode_rewards[episode_ends].cpu().numpy()
             recent_scores.extend(finished_scores)
 
-            # 4. Extract the specific reasons they finished to track win/crash rates
             recent_successes.extend(done[episode_ends].cpu().numpy())
             recent_crashes.extend((bad_done | ~valid_mask)[episode_ends].cpu().numpy())
             recent_timeouts.extend(timeout[episode_ends].cpu().numpy())
 
-            # 5. Reset the accumulators ONLY for the environments that finished
             current_episode_rewards[episode_ends] = 0.0
 
             if algorithm == "attitude_agent":
                 agent.reset_pid_states(episode_ends)
 
-        # 6. Push to buffer (Strictly excluding timeouts for Bellman backup correctness!)
         real_terminal_signal = done | bad_done | ~valid_mask
         buffer.push(obs, action, reward, next_obs, real_terminal_signal)
 
-        # 7. NaN Observation Shield
         obs = torch.where(valid_mask.unsqueeze(-1), next_obs, torch.zeros_like(next_obs))
 
         if epoch > 100:
@@ -140,11 +133,6 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_
             run.log(log_dict, step=epoch)
         else:
             print(f"Epoch {epoch}, Reward: {avg_score:.2f}, Success: {win_rate:.2f}, Crash: {crash_rate:.2f}, Timeout: {timeout_rate:.2f}, Epoch Time: {epoch_time:.4f}s")
-
-        # Reset done/bad_done/timeout trackers
-        done_stat = 0
-        bad_done_stat = 0
-        timeout_stat = 0
 
         # Save the model after every 10000 steps
         if epoch % 10000 == 0:

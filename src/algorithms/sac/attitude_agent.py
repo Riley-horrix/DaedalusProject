@@ -16,7 +16,6 @@ class AttitudeAgent(SACAgent):
         self.kd = config('kd', default=0.01)
         self.dt = config('dt', default=0.01)
 
-        # State tensors for I and D components
         self.integral_error = torch.zeros(num_envs, device=device)
         self.prev_error = torch.zeros(num_envs, device=device)
 
@@ -69,7 +68,7 @@ class AttitudeAgent(SACAgent):
         p_term = self.kp * error
 
         self.integral_error += error * self.dt
-        # Prevent the integral term from accumulating to infinity during long stalls
+        # Prevent the integral term from accumulating to infinity
         self.integral_error = torch.clamp(self.integral_error, min=-50.0, max=50.0)
         i_term = self.ki * self.integral_error
 
@@ -79,7 +78,6 @@ class AttitudeAgent(SACAgent):
         # Save current error for next step's derivative calculation
         self.prev_error = error.clone()
 
-        # Combine terms
         pid_output = p_term + i_term + d_term
         thrust = torch.clamp(pid_output, -1.0, 1.0)
 
