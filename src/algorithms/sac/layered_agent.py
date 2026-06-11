@@ -69,8 +69,8 @@ class LayeredSACAgent(SACAgent):
         norm_Q = obs[:, 14]
         norm_R = obs[:, 15]
 
-        # norm_thr = obs[:, 16]
-        norm_thr = torch.zeros_like(obs[:, 16])
+        norm_thr = obs[:, 16]
+        # norm_thr = torch.zeros_like(obs[:, 16])
         norm_el = obs[:, 17]
         norm_ail = obs[:, 18]
         norm_rud = obs[:, 19]
