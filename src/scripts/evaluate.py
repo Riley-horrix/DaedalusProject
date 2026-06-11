@@ -47,7 +47,7 @@ def export_batch_acmi(filename, step_idx, dt, npos, epos, alt, roll, pitch, yaw,
             else:
                 f.write(f"{obj_id},T={lon}|{lat}|{h}|{r}|{p}|{y_ang}\n")
 
-            if t_npos is not None and t_epos is not None and t_alt is not None and t_pitch is not None and t_heading is not None:
+            if t_npos is not None and t_epos is not None and t_alt is not None:
                 t_n = t_npos[i].item()
                 t_e = t_epos[i].item()
                 t_a = t_alt[i].item()

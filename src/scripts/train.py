@@ -69,22 +69,9 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_
     obs_mean = torch.zeros(obs_dim, device=device)
     obs_var = torch.ones(obs_dim, device=device)
 
-    # Define warmup steps for TD3 (defaulting to 10k as per the paper)
-    warmup_steps = env_config('warmup_steps', 10000)
-
     for epoch in range(env_config('epochs')):
         with torch.no_grad():
-            # <-- Action Selection Logic Updated for TD3 -->
-            if algorithm == "td3_agent":
-                # Pure exploration for early epochs
-                if epoch < warmup_steps and load_model is None:
-                    # Generate uniformly random actions in [-1, 1]
-                    action = torch.rand((env.num_envs, action_dim), device=device) * 2.0 - 1.0
-                else:
-                    # Deterministic action + Gaussian noise
-                    action = agent.act(obs, add_noise=True)
-            else:
-                action = agent.act(obs)
+            action = agent.act(obs)
 
         # Update mean and std of observations for logging
         obs_mean = 0.99 * obs_mean + 0.01 * obs.mean(dim=0)
@@ -123,7 +110,7 @@ def train(env_config: Config, agent_config: Config, run: wandb.Run | None, data_
         obs = torch.where(valid_mask.unsqueeze(-1), next_obs, torch.zeros_like(next_obs))
 
         if epoch > 100:
-            agent.update(buffer, 19, log)
+            agent.update(buffer, 5, log)
 
         # Calculate epoch time
         now_epoch_time = time.time()

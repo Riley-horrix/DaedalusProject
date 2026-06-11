@@ -3,8 +3,8 @@
   "gamma": 0.99,
   "tau": 0.005,
   "batch_size": 1024,
-  "actor_hidden_dim": 256,
-  "critic_hidden_dim": 256,
+  "actor_hidden_dim": 128,
+  "critic_hidden_dim": 128,
   "actor_learning_rate": 0.0003,
   "critic_learning_rate": 0.0003,
   "actor_weight_decay": 0.0,
@@ -12,5 +12,5 @@
   "init_alpha": 0.2,
   "alpha_learning_rate": 0.0003,
   "alpha_weight_decay": 0.0,
-  "inner_model_path" : "data/sac_agent_twilight-puddle-88_recent.pt"
+  "inner_model_path" : "../models/attitude.pt"
 }
